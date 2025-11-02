@@ -5,10 +5,77 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "glycoinformatics_ai"
 version = "0.1.0"
-description = "MVP glycoinformatics platform (KG + LLM + GoT)"
-authors = [{name = "Adetayo Okunoye"}]
-requires-python = ">=3.11"
-dependencies = []
+description = "Comprehensive AI-powered glycoinformatics platform for glycan structure analysis, prediction, and reasoning"
+authors = [{name = "Adetayo Okunoye", email = "adetayo@example.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.23",
+    "psycopg2-binary>=2.9.9",
+    "redis>=5.0.1",
+    "aiofiles>=23.2.1",
+    "pydantic>=2.5.0",
+    "requests>=2.31.0",
+    "aiohttp>=3.9.1",
+    "numpy>=1.24.0",
+    "pandas>=2.1.0",
+    "scikit-learn>=1.3.0",
+    "torch>=2.1.0",
+    "transformers>=4.35.0",
+    "rdflib>=7.0.0",
+    "SPARQLWrapper>=2.0.0",
+    "elasticsearch>=8.11.0",
+    "minio>=7.2.0",
+    "pymongo>=4.6.0",
+    "prometheus-client>=0.19.0",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.11.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter>=1.0.0",
+    "ipykernel>=6.26.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "plotly>=5.17.0",
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI"
+Documentation = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI/tree/main/documentations"
+Repository = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI"
+Issues = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI/issues"
+
+[tool.setuptools]
+packages = ["glycokg", "glycollm", "glycogot", "glyco_platform"]
+
+[tool.setuptools.package-dir]
+glycokg = "glycokg"
+glycollm = "glycollm"
+glycogot = "glycogot"
+glyco_platform = "glyco_platform"
 
 [tool.black]
 line-length = 100

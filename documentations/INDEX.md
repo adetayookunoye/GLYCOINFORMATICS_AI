@@ -44,6 +44,18 @@ This directory contains comprehensive documentation for the GlycoInformatics AI 
   - Container orchestration
   - Production deployment strategies
 
+- **[COMPLETE_DEPLOYMENT_GUIDE.md](./COMPLETE_DEPLOYMENT_GUIDE.md)** - Complete production deployment guide
+  - Step-by-step deployment instructions
+  - Database credentials and configuration
+  - Service access URLs and troubleshooting
+  - Production checklist and maintenance
+
+- **[CREDENTIALS_REFERENCE.md](./CREDENTIALS_REFERENCE.md)** - Production credentials reference
+  - Complete database credentials
+  - System access information
+  - Security best practices
+  - Emergency access procedures
+
 - **[MAKEFILE_SUMMARY.md](./MAKEFILE_SUMMARY.md)** - Build system documentation
   - Make targets and automation
   - Development workflows
@@ -79,9 +91,11 @@ This directory contains comprehensive documentation for the GlycoInformatics AI 
 3. [KNOWLEDGE_GRAPH_SUMMARY.md](./KNOWLEDGE_GRAPH_SUMMARY.md) - Semantic layer design
 
 ### For **DevOps Engineers**:
-1. [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) - Containerization strategy
-2. [METRICS_ANALYSIS.md](./METRICS_ANALYSIS.md) - Monitoring and observability
-3. [MAKEFILE_SUMMARY.md](./MAKEFILE_SUMMARY.md) - Build automation
+1. [COMPLETE_DEPLOYMENT_GUIDE.md](./COMPLETE_DEPLOYMENT_GUIDE.md) - Full production deployment
+2. [CREDENTIALS_REFERENCE.md](./CREDENTIALS_REFERENCE.md) - System credentials and access
+3. [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) - Containerization strategy
+4. [METRICS_ANALYSIS.md](./METRICS_ANALYSIS.md) - Monitoring and observability
+5. [MAKEFILE_SUMMARY.md](./MAKEFILE_SUMMARY.md) - Build automation
 
 ### For **Researchers & Users**:
 1. [README.md](./README.md) - Getting started

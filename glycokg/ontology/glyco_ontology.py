@@ -79,6 +79,7 @@ class GlycoOntology:
             # Protein-related classes
             (self.GLYCO.Protein, "A protein that can be glycosylated"),
             (self.GLYCO.GlycosylationSite, "A specific amino acid position where glycosylation occurs"),
+            (self.GLYCO.ProteinGlycanAssociation, "An association between a protein and glycan"),
             (self.GLYCO.GlycoproteinComplex, "A complex of protein and attached glycans"),
             
             # Biological context classes
@@ -308,6 +309,33 @@ class GlycoOntology:
         logger.debug(f"Added glycan {glytoucan_id} to ontology")
         return glycan_uri
         
+    def add_glycoprotein_association(self,
+                                   glytoucan_id: str,
+                                   uniprot_id: str,
+                                   glycosylation_site: Optional[int] = None,
+                                   evidence_type: Optional[str] = None,
+                                   **kwargs) -> URIRef:
+        """
+        Add a glycoprotein association (alias for protein_glycan_association).
+        
+        Args:
+            glytoucan_id: GlyTouCan accession ID
+            uniprot_id: UniProt accession ID  
+            glycosylation_site: Amino acid position
+            evidence_type: Type of experimental evidence
+            **kwargs: Additional properties
+            
+        Returns:
+            URIRef for the created association
+        """
+        return self.add_protein_glycan_association(
+            uniprot_id=uniprot_id,
+            glytoucan_id=glytoucan_id,
+            glycosylation_site=glycosylation_site,
+            evidence_type=evidence_type,
+            **kwargs
+        )
+    
     def add_protein_glycan_association(self,
                                      uniprot_id: str,
                                      glytoucan_id: str,
@@ -316,6 +344,7 @@ class GlycoOntology:
                                      organism_taxid: Optional[int] = None,
                                      tissue: Optional[str] = None,
                                      confidence_score: Optional[float] = None,
+                                     evidence_type: Optional[str] = None,
                                      **kwargs) -> URIRef:
         """
         Add a protein-glycan association to the ontology.
@@ -387,6 +416,10 @@ class GlycoOntology:
         self.graph.add((assoc_uri, self.GLYCO.hasCreationDate,
                        Literal(datetime.now(), datatype=XSD.dateTime)))
         self.graph.add((assoc_uri, self.GLYCO.hasSource, Literal("GlyGen")))
+        
+        # Evidence type
+        if evidence_type:
+            self.graph.add((assoc_uri, self.GLYCO.hasEvidenceType, Literal(evidence_type)))
         
         # Additional properties
         for key, value in kwargs.items():
@@ -472,6 +505,16 @@ class GlycoOntology:
         """
         return self.graph.serialize(format=format)
         
+    def save_ontology(self, filepath: str, format: str = "turtle"):
+        """
+        Save ontology to file (alias for save_to_file).
+        
+        Args:
+            filepath: Output file path
+            format: RDF serialization format
+        """
+        self.save_to_file(filepath, format)
+        
     def save_to_file(self, filepath: str, format: str = "turtle"):
         """
         Save ontology to file.
@@ -480,6 +523,10 @@ class GlycoOntology:
             filepath: Output file path
             format: RDF serialization format
         """
+        # Ensure directory exists
+        import os
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(self.serialize(format=format))
             

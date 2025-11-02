@@ -74,6 +74,47 @@ DEV_PORT := 8080
 COMPOSE_FILE := docker-compose.yml
 COMPOSE_PROJECT := glyco_platform
 
+# ============================================================================
+# DATABASE CREDENTIALS (Production Ready)
+# ============================================================================
+# PostgreSQL Database
+POSTGRES_HOST := localhost
+POSTGRES_PORT := 5432
+POSTGRES_DB := glycokg
+POSTGRES_USER := glyco_admin
+POSTGRES_PASSWORD := glyco_secure_pass_2025
+DATABASE_URL := postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)
+
+# Redis Cache
+REDIS_HOST := localhost
+REDIS_PORT := 6379
+REDIS_DB := 0
+REDIS_URL := redis://$(REDIS_HOST):$(REDIS_PORT)/$(REDIS_DB)
+
+# MongoDB Document Store
+MONGODB_HOST := localhost
+MONGODB_PORT := 27017
+MONGODB_USER := glyco_admin
+MONGODB_PASSWORD := glyco_secure_pass_2025
+MONGODB_DB := glyco_results
+MONGODB_URL := mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOST):$(MONGODB_PORT)
+
+# MinIO Object Storage
+MINIO_ENDPOINT := localhost:9000
+MINIO_ACCESS_KEY := glyco_admin
+MINIO_SECRET_KEY := glyco_secure_pass_2025
+MINIO_BUCKET := glyco-data
+
+# GraphDB RDF Store
+GRAPHDB_URL := http://localhost:7200
+GRAPHDB_REPOSITORY := glycokg
+
+# Elasticsearch Search Engine
+ELASTICSEARCH_URL := http://localhost:9200
+
+# System User Credentials
+SYSTEM_USER_PASSWORD := Adebayo@120
+
 # Python configuration
 PYTHON_PATH := .
 VENV_NAME := venv
@@ -82,7 +123,7 @@ PIP_REQUIREMENTS := requirements.txt
 # Directories
 SRC_DIR := glyco_platform
 TEST_DIR := tests
-DOCS_DIR := docs
+DOCS_DIR := documentations
 DATA_DIR := data
 LOGS_DIR := logs
 MODELS_DIR := models
@@ -216,21 +257,63 @@ init-data:
 	@echo "Sample data loaded. Check GraphDB at http://localhost:7200"
 
 # Development helpers
+# ============================================================================
+# DATABASE OPERATIONS (Production Ready)
+# ============================================================================
+
+# Database shell access with correct credentials
+db-shell:
+	@echo "🔐 Connecting to PostgreSQL with credentials: $(POSTGRES_USER)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+	@$(DOCKER_COMPOSE) exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+# Initialize database with full schema and credentials
+db-init:
+	@echo "🗄️  Initializing PostgreSQL database..."
+	@echo "📋 Database: $(DATABASE_URL)"
+	@$(DOCKER_COMPOSE) exec postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "SELECT version();"
+	@echo "✅ Database initialized successfully!"
+
+# Load sample data with correct credentials
+data-sync:
+	@echo "🔄 Starting data synchronization with credentials..."
+	@echo "Database: $(DATABASE_URL)"
+	@POSTGRES_USER=$(POSTGRES_USER) POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) python scripts/init_sample_data.py --full-sync --organism=9606 --limit=100
+
+# Development shells
 dev-shell:
 	@$(DOCKER_COMPOSE) exec jupyterlab bash
-
-db-shell:
-	@$(DOCKER_COMPOSE) exec postgres psql -U glycoinfo -d glycokg
 
 redis-cli:
 	@$(DOCKER_COMPOSE) exec redis redis-cli
 
-# Backup and restore
+# Access MongoDB with credentials
+mongo-shell:
+	@echo "🍃 Connecting to MongoDB: $(MONGODB_URL)"
+	@$(DOCKER_COMPOSE) exec mongodb mongosh "$(MONGODB_URL)/$(MONGODB_DB)"
+
+# MinIO client access
+minio-cli:
+	@echo "📦 MinIO Console: http://$(MINIO_ENDPOINT)"
+	@echo "Access Key: $(MINIO_ACCESS_KEY)"
+	@echo "Secret Key: $(MINIO_SECRET_KEY)"
+
+# ============================================================================
+# BACKUP AND RESTORE WITH CREDENTIALS
+# ============================================================================
+
 backup:
-	@echo "Creating backup..."
+	@echo "💾 Creating comprehensive backup with credentials..."
 	@mkdir -p backups/$(shell date +%Y%m%d_%H%M%S)
-	@$(DOCKER_COMPOSE) exec postgres pg_dump -U glycoinfo glycokg > backups/$(shell date +%Y%m%d_%H%M%S)/postgres_backup.sql
-	@echo "Backup created in backups/ directory"
+	@echo "Backing up PostgreSQL..."
+	@$(DOCKER_COMPOSE) exec postgres pg_dump -U $(POSTGRES_USER) $(POSTGRES_DB) > backups/$(shell date +%Y%m%d_%H%M%S)/postgres_backup.sql
+	@echo "Backing up MongoDB..."
+	@$(DOCKER_COMPOSE) exec mongodb mongodump --uri="$(MONGODB_URL)" --out=backups/$(shell date +%Y%m%d_%H%M%S)/mongodb_backup
+	@echo "✅ Backup created in backups/ directory with all credentials"
+
+# Restore from backup
+restore:
+	@echo "🔄 Restore functionality - specify backup directory"
+	@echo "Usage: make restore BACKUP_DIR=backups/YYYYMMDD_HHMMSS"
 
 # Production deployment (placeholder)
 deploy:

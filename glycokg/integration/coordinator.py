@@ -367,9 +367,9 @@ class DataIntegrationCoordinator:
         INSERT INTO cache.glycan_structures 
         (glytoucan_id, wurcs_sequence, glycoct, iupac_extended, iupac_condensed,
          mass_mono, mass_avg, composition, source_id)
-        VALUES (%(glytoucan_id)s, %(wurcs_sequence)s, %(glycoct)s, 
-                %(iupac_extended)s, %(iupac_condensed)s, %(mass_mono)s, 
-                %(mass_avg)s, %(composition)s, %(source_id)s)
+        VALUES (:glytoucan_id, :wurcs_sequence, :glycoct, 
+                :iupac_extended, :iupac_condensed, :mass_mono, 
+                :mass_avg, :composition, :source_id)
         ON CONFLICT (glytoucan_id) DO UPDATE SET
         wurcs_sequence = EXCLUDED.wurcs_sequence,
         glycoct = EXCLUDED.glycoct,
@@ -406,9 +406,9 @@ class DataIntegrationCoordinator:
         INSERT INTO cache.protein_glycan_associations
         (uniprot_id, glytoucan_id, glycosylation_site, evidence_type,
          organism_taxid, tissue, disease, confidence_score, source_id)
-        VALUES (%(uniprot_id)s, %(glytoucan_id)s, %(glycosylation_site)s,
-                %(evidence_type)s, %(organism_taxid)s, %(tissue)s,
-                %(disease)s, %(confidence_score)s, %(source_id)s)
+        VALUES (:uniprot_id, :glytoucan_id, :glycosylation_site,
+                :evidence_type, :organism_taxid, :tissue,
+                :disease, :confidence_score, :source_id)
         ON CONFLICT (uniprot_id, glytoucan_id, glycosylation_site) DO UPDATE SET
         evidence_type = EXCLUDED.evidence_type,
         organism_taxid = EXCLUDED.organism_taxid,
@@ -443,9 +443,9 @@ class DataIntegrationCoordinator:
         INSERT INTO cache.ms_spectra
         (spectrum_id, glytoucan_id, precursor_mz, charge_state,
          collision_energy, peaks, metadata, source_id)
-        VALUES (%(spectrum_id)s, %(glytoucan_id)s, %(precursor_mz)s,
-                %(charge_state)s, %(collision_energy)s, %(peaks)s,
-                %(metadata)s, %(source_id)s)
+        VALUES (:spectrum_id, :glytoucan_id, :precursor_mz,
+                :charge_state, :collision_energy, :peaks,
+                :metadata, :source_id)
         ON CONFLICT (spectrum_id) DO UPDATE SET
         glytoucan_id = EXCLUDED.glytoucan_id,
         precursor_mz = EXCLUDED.precursor_mz,
