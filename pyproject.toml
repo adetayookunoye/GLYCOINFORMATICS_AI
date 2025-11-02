@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glycoinformatics_ai"
+version = "0.1.0"
+description = "MVP glycoinformatics platform (KG + LLM + GoT)"
+authors = [{name = "Adetayo Okunoye"}]
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.black]
+line-length = 100

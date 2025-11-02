@@ -1,0 +1,1 @@
+# GlycoKG module (stubs for MVP)

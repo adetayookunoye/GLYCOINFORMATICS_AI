@@ -1,0 +1,49 @@
+# Disease-Associated Glycans Query
+# Find glycans associated with specific diseases and their expression patterns
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX disease: <http://purl.obolibrary.org/obo/DOID_>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX taxonomy: <http://purl.uniprot.org/taxonomy/>
+
+SELECT DISTINCT ?disease_name ?glycan_id ?wurcs ?protein_id ?tissue ?evidence_type ?pubmed
+WHERE {
+  # Find disease associations
+  ?disease a glyco:Disease ;
+          rdfs:label ?disease_name .
+          
+  # Filter for specific diseases (uncomment as needed)
+  FILTER(
+    CONTAINS(LCASE(?disease_name), "cancer") ||
+    CONTAINS(LCASE(?disease_name), "diabetes") ||
+    CONTAINS(LCASE(?disease_name), "alzheimer") ||
+    CONTAINS(LCASE(?disease_name), "inflammatory")
+  )
+  
+  ?association a glyco:ProteinGlycanAssociation ;
+              glyco:associatedWithDisease ?disease ;
+              glyco:hasGlycan ?glycan ;
+              glyco:hasProtein ?protein ;
+              glyco:foundIn taxonomy:9606 .  # Human
+              
+  ?glycan glyco:hasGlyTouCanID ?glycan_id .
+  ?protein glyco:hasUniProtID ?protein_id .
+  
+  OPTIONAL { ?glycan glyco:hasWURCSSequence ?wurcs }
+  
+  # Get tissue context
+  OPTIONAL {
+    ?association glyco:expressedIn ?tissue_uri .
+    ?tissue_uri rdfs:label ?tissue .
+  }
+  
+  # Get experimental evidence
+  OPTIONAL {
+    ?association glyco:hasExperimentalEvidence ?evidence .
+    ?evidence glyco:hasEvidenceType ?evidence_type ;
+             glyco:publishedIn ?pubmed .
+  }
+}
+ORDER BY ?disease_name ?glycan_id
+LIMIT 100

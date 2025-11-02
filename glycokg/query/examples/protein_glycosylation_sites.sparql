@@ -1,0 +1,44 @@
+# Protein Glycosylation Sites Analysis
+# Comprehensive query for protein glycosylation site information and patterns
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX taxonomy: <http://purl.uniprot.org/taxonomy/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?protein_id ?protein_name ?site_position ?site_type ?glycan_id ?wurcs ?tissue ?confidence
+WHERE {
+  ?protein a glyco:Protein ;
+          glyco:hasUniProtID ?protein_id ;
+          glyco:hasGlycosylationSite ?site .
+          
+  ?site glyco:hasGlycosylationPosition ?site_position ;
+       glyco:hasSiteType ?site_type .
+       
+  ?association a glyco:ProteinGlycanAssociation ;
+              glyco:hasProtein ?protein ;
+              glyco:atSite ?site ;
+              glyco:hasGlycan ?glycan ;
+              glyco:foundIn taxonomy:9606 ;  # Human
+              glyco:hasConfidenceScore ?confidence .
+              
+  ?glycan glyco:hasGlyTouCanID ?glycan_id .
+  
+  OPTIONAL { ?protein rdfs:label ?protein_name }
+  OPTIONAL { ?glycan glyco:hasWURCSSequence ?wurcs }
+  
+  # Get tissue expression
+  OPTIONAL {
+    ?association glyco:expressedIn ?tissue_uri .
+    ?tissue_uri rdfs:label ?tissue .
+  }
+  
+  # Filter for specific glycosylation types if needed
+  FILTER(?site_type = "N-linked" || ?site_type = "O-linked")
+  
+  # Filter for high confidence
+  FILTER(?confidence >= 0.8)
+}
+ORDER BY ?protein_id ?site_position
+LIMIT 200

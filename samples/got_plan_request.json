@@ -1,0 +1,297 @@
+{
+  "got_plan_request": {
+    "request_id": "glyco_analysis_001",
+    "timestamp": "2025-11-02T10:30:00Z",
+    "request_type": "comprehensive_glycan_analysis",
+    "priority": "high",
+    "requester": {
+      "name": "Dr. Sarah Johnson",
+      "institution": "Glycoinformatics Research Lab",
+      "contact": "s.johnson@glycolab.edu"
+    },
+    
+    "analysis_goal": {
+      "primary_objective": "Identify unknown glycan structure from MS/MS data and predict biological function",
+      "secondary_objectives": [
+        "Determine biosynthetic pathway",
+        "Identify potential disease associations",
+        "Generate testable hypotheses for functional validation"
+      ]
+    },
+    
+    "input_data": {
+      "mass_spectrum": {
+        "precursor_mass": 1663.58,
+        "precursor_charge": 1,
+        "collision_energy": "25% NCE",
+        "fragments": [
+          {"mz": 163.06, "intensity": 45.2, "annotation": "Hex"},
+          {"mz": 204.09, "intensity": 78.5, "annotation": "HexNAc"},
+          {"mz": 274.09, "intensity": 23.1, "annotation": "Neu5Ac"},
+          {"mz": 366.14, "intensity": 89.7, "annotation": "Hex-HexNAc"},
+          {"mz": 512.20, "intensity": 34.6, "annotation": "HexNAc-Fuc"},
+          {"mz": 657.23, "intensity": 92.3, "annotation": "Neu5Ac-Gal-GlcNAc"},
+          {"mz": 1217.43, "intensity": 67.8, "annotation": "Y5"},
+          {"mz": 1500.54, "intensity": 41.2, "annotation": "Y6"}
+        ]
+      },
+      
+      "experimental_context": {
+        "sample_source": "Human serum IgG",
+        "sample_preparation": "PNGase F digestion, permethylation",
+        "instrument": "Orbitrap Fusion Lumos",
+        "ionization": "ESI positive mode",
+        "separation": "C18 nano-LC"
+      },
+      
+      "biological_context": {
+        "protein_target": "Immunoglobulin G heavy chain",
+        "attachment_site": "Asn297",
+        "tissue_type": "Serum",
+        "organism": "NCBITaxon:9606",
+        "disease_state": "Inflammatory bowel disease patient",
+        "control_comparison": "Available from healthy donors"
+      },
+      
+      "literature_context": {
+        "known_motifs": ["Core fucosylation", "Sialyl Lewis X", "Bisecting GlcNAc"],
+        "relevant_papers": [
+          "PMID:12345678 - IgG glycosylation in IBD",
+          "PMID:23456789 - Core fucose and inflammation"
+        ],
+        "pathway_databases": ["KEGG Glycan", "GlyTouCan", "UniCarbKB"]
+      }
+    },
+    
+    "reasoning_workflow": {
+      "workflow_type": "multi_step_analysis",
+      "reasoning_steps": [
+        {
+          "step_id": "structural_analysis",
+          "step_type": "deductive",
+          "description": "Analyze mass spectral data to determine glycan composition and structure",
+          "inputs": ["mass_spectrum", "fragmentation_pattern"],
+          "reasoning_methods": ["pattern_matching", "fragmentation_prediction", "mass_calculation"],
+          "expected_outputs": ["candidate_structures", "confidence_scores"],
+          "success_criteria": "Confidence > 0.8 for top candidate"
+        },
+        
+        {
+          "step_id": "database_search",
+          "step_type": "inductive",
+          "description": "Search knowledge graphs and databases for matching structures",
+          "inputs": ["candidate_structures", "mass_range"],
+          "reasoning_methods": ["similarity_search", "exact_match", "substructure_match"],
+          "expected_outputs": ["database_matches", "known_functions"],
+          "dependencies": ["structural_analysis"]
+        },
+        
+        {
+          "step_id": "biosynthetic_inference",
+          "step_type": "causal",
+          "description": "Infer biosynthetic pathway and enzymatic requirements",
+          "inputs": ["confirmed_structure", "biological_context"],
+          "reasoning_methods": ["pathway_reconstruction", "enzyme_prediction", "temporal_ordering"],
+          "expected_outputs": ["biosynthetic_pathway", "required_enzymes"],
+          "dependencies": ["database_search"]
+        },
+        
+        {
+          "step_id": "functional_prediction",
+          "step_type": "abductive",
+          "description": "Predict biological functions based on structure and context",
+          "inputs": ["structure", "protein_context", "disease_association"],
+          "reasoning_methods": ["structure_function_mapping", "literature_mining", "ontology_reasoning"],
+          "expected_outputs": ["predicted_functions", "mechanism_hypotheses"],
+          "dependencies": ["biosynthetic_inference"]
+        },
+        
+        {
+          "step_id": "disease_association",
+          "step_type": "analogical",
+          "description": "Analyze potential disease relevance and biomarker potential",
+          "inputs": ["structure", "disease_state", "control_comparison"],
+          "reasoning_methods": ["comparative_analysis", "biomarker_identification", "clinical_correlation"],
+          "expected_outputs": ["disease_relevance", "biomarker_potential"],
+          "dependencies": ["functional_prediction"]
+        },
+        
+        {
+          "step_id": "hypothesis_generation",
+          "step_type": "compositional",
+          "description": "Generate testable hypotheses for experimental validation",
+          "inputs": ["all_previous_results"],
+          "reasoning_methods": ["hypothesis_synthesis", "experimental_design", "validation_planning"],
+          "expected_outputs": ["testable_hypotheses", "validation_experiments"],
+          "dependencies": ["disease_association"]
+        }
+      ]
+    },
+    
+    "constraints": {
+      "deny_biohazard_paths": true,
+      "max_steps": 8,
+      "beam_width": 8,
+      "time_limit": "30 minutes",
+      "confidence_threshold": 0.7
+    },
+    
+    "uncertainty": {
+      "type": "mc_dropout",
+      "samples": 20,
+      "confidence_intervals": true,
+      "sensitivity_analysis": true
+    },
+    
+    "integration_requirements": {
+      "knowledge_graph_queries": [
+        {
+          "purpose": "Structure lookup",
+          "sparql_query": "SELECT ?glycan ?wurcs ?mass WHERE { ?glycan glyco:hasMonoisotopicMass ?mass . FILTER(?mass > 1660 && ?mass < 1670) }"
+        },
+        {
+          "purpose": "Function annotation",
+          "sparql_query": "SELECT ?glycan ?function ?evidence WHERE { ?glycan glyco:hasFunction ?function . ?function glyco:hasEvidence ?evidence }"
+        }
+      ],
+      
+      "ai_model_tasks": [
+        {
+          "task": "structure_prediction",
+          "model": "GlycoLLM",
+          "inputs": ["tokenized_spectra", "fragmentation_pattern"],
+          "parameters": {"beam_size": 5, "max_length": 256}
+        },
+        {
+          "task": "function_prediction", 
+          "model": "GlycoLLM",
+          "inputs": ["structure_embedding", "context_features"],
+          "parameters": {"top_k": 10, "confidence_threshold": 0.7}
+        }
+      ],
+      
+      "external_apis": [
+        {
+          "service": "GlyTouCan",
+          "endpoint": "structure_search",
+          "parameters": {"mass_tolerance": 5.0, "composition_filter": true}
+        },
+        {
+          "service": "GlyGen",
+          "endpoint": "protein_glycosylation",
+          "parameters": {"protein_id": "P01857", "site_specific": true}
+        }
+      ]
+    },
+    
+    "validation_criteria": {
+      "structural_confidence": {
+        "min_score": 0.8,
+        "validation_methods": ["cross_validation", "literature_comparison", "expert_review"]
+      },
+      
+      "functional_reliability": {
+        "evidence_requirements": ["experimental_data", "literature_support", "pathway_consistency"],
+        "confidence_threshold": 0.7
+      },
+      
+      "reasoning_quality": {
+        "logical_consistency": true,
+        "evidence_integration": true,
+        "alternative_consideration": true,
+        "uncertainty_quantification": true
+      }
+    },
+    
+    "output_specifications": {
+      "primary_deliverables": [
+        {
+          "type": "structure_identification",
+          "format": "WURCS notation with confidence score",
+          "validation": "Cross-referenced with multiple databases"
+        },
+        {
+          "type": "functional_annotation",
+          "format": "GO terms and biological processes",
+          "validation": "Literature evidence and pathway consistency"
+        },
+        {
+          "type": "reasoning_explanation",
+          "format": "Step-by-step reasoning chain with evidence",
+          "validation": "Logical consistency and completeness"
+        }
+      ],
+      
+      "supporting_outputs": [
+        {
+          "type": "biosynthetic_pathway",
+          "format": "Enzyme sequence with reaction details",
+          "includes": ["substrate_specificity", "cofactor_requirements", "regulatory_factors"]
+        },
+        {
+          "type": "disease_association",
+          "format": "Clinical relevance assessment",
+          "includes": ["biomarker_potential", "therapeutic_targets", "diagnostic_utility"]
+        }
+      ]
+    }
+  },
+  
+  "example_variations": {
+    "simple_structure_id": {
+      "goal": "elucidate structure from partial MS/MS",
+      "inputs": {
+        "organism": "NCBITaxon:9606",
+        "mass_spectrum": {
+          "precursor_mass": 365.13,
+          "fragments": [{"mz": 163.06, "intensity": 100}, {"mz": 204.09, "intensity": 75}]
+        }
+      },
+      "constraints": {
+        "deny_biohazard_paths": true,
+        "max_steps": 3,
+        "beam_width": 5
+      },
+      "uncertainty": {
+        "type": "mc_dropout",
+        "samples": 10
+      }
+    },
+    
+    "comparative_analysis": {
+      "goal": "compare glycan profiles between conditions",
+      "inputs": {
+        "organism": "NCBITaxon:9606",
+        "glycan_list": [
+          {"id": "G12345", "source": "healthy_control"},
+          {"id": "G67890", "source": "disease_sample"}
+        ]
+      },
+      "constraints": {
+        "max_steps": 6,
+        "beam_width": 10
+      }
+    },
+    
+    "hypothesis_driven": {
+      "goal": "validate hypothesis about core fucosylation",
+      "inputs": {
+        "hypothesis": "Core fucosylation enhances IgG effector function in inflammatory conditions",
+        "organism": "NCBITaxon:9606"
+      },
+      "constraints": {
+        "max_steps": 8,
+        "evidence_threshold": 0.8
+      }
+    }
+  },
+  
+  "metadata": {
+    "schema_version": "1.0.0",
+    "created_by": "GlycoGOT System Designer",
+    "creation_date": "2025-11-02",
+    "last_modified": "2025-11-02",
+    "documentation_url": "https://docs.glycogot.org/api/got-plans",
+    "example_usage": "This sample demonstrates comprehensive glycoinformatics analysis using multi-step reasoning, knowledge graph integration, and AI model coordination."
+  }
+}

@@ -1,0 +1,51 @@
+# Lewis X Antigen in Human Tissues - Enhanced Query
+# This query finds Lewis X antigens expressed in human tissues with detailed annotations
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX taxonomy: <http://purl.uniprot.org/taxonomy/>
+PREFIX tissue: <http://purl.obolibrary.org/obo/UBERON_>
+PREFIX chebi: <http://purl.obolibrary.org/obo/CHEBI_>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT DISTINCT ?glycan ?glycan_id ?wurcs ?protein ?protein_id ?tissue ?tissue_name ?confidence ?pubmed
+WHERE {
+  # Find Lewis X antigen structures
+  ?glycan a glyco:Oligosaccharide ;
+          glyco:hasGlyTouCanID ?glycan_id ;
+          glyco:hasWURCSSequence ?wurcs ;
+          glyco:hasMotif ?motif .
+          
+  # Filter for Lewis X pattern (Gal-beta1,4-(Fuc-alpha1,3)-GlcNAc)
+  FILTER(CONTAINS(LCASE(?wurcs), "lewis") || 
+         CONTAINS(LCASE(str(?motif)), "lewis") ||
+         REGEX(?wurcs, "a2122h.*b1.*c1", "i"))
+         
+  # Find associated proteins in humans
+  ?association a glyco:ProteinGlycanAssociation ;
+              glyco:hasGlycan ?glycan ;
+              glyco:hasProtein ?protein ;
+              glyco:foundIn taxonomy:9606 ;  # Homo sapiens
+              glyco:hasConfidenceScore ?confidence .
+              
+  ?protein glyco:hasUniProtID ?protein_id .
+  
+  # Get tissue expression
+  OPTIONAL {
+    ?association glyco:expressedIn ?tissue .
+    ?tissue rdfs:label ?tissue_name .
+  }
+  
+  # Get supporting publications
+  OPTIONAL {
+    ?association glyco:hasExperimentalEvidence ?evidence .
+    ?evidence glyco:publishedIn ?pubmed .
+  }
+  
+  # Filter for high confidence associations
+  FILTER(?confidence >= 0.7)
+}
+ORDER BY DESC(?confidence) ?tissue_name
+LIMIT 50

@@ -1,0 +1,31 @@
+# Glycan Mass Range Query
+# Find all glycans within a specific mass range with their structural information
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?glycan_id ?wurcs ?mass ?formula ?composition
+WHERE {
+  ?glycan a glyco:Oligosaccharide ;
+          glyco:hasGlyTouCanID ?glycan_id ;
+          glyco:hasMonoisotopicMass ?mass .
+          
+  # Mass range filter (e.g., for typical N-glycans: 1000-3000 Da)
+  FILTER(?mass >= 1000.0 && ?mass <= 3000.0)
+  
+  OPTIONAL { ?glycan glyco:hasWURCSSequence ?wurcs }
+  OPTIONAL { ?glycan glyco:hasMolecularFormula ?formula }
+  
+  # Get composition information
+  OPTIONAL {
+    ?glycan glyco:hasComposition ?comp .
+    ?comp glyco:hasHexCount ?hex ;
+          glyco:hasHexNAcCount ?hexnac ;
+          glyco:hasFucCount ?fuc ;
+          glyco:hasNeuAcCount ?neuac .
+    BIND(CONCAT("Hex:", str(?hex), ",HexNAc:", str(?hexnac), ",Fuc:", str(?fuc), ",NeuAc:", str(?neuac)) AS ?composition)
+  }
+}
+ORDER BY ?mass
+LIMIT 100

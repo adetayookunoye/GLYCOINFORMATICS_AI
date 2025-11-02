@@ -1,0 +1,39 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+@prefix sr: <http://www.openrdf.org/config/repository/sail#> .
+@prefix sail: <http://www.openrdf.org/config/sail#> .
+@prefix owlim: <http://www.ontotext.com/trree/owlim#> .
+
+[] a rep:Repository ;
+   rep:repositoryID "glycokg" ;
+   rdfs:label "GlycoKG Repository" ;
+   rep:repositoryImpl [
+      rep:repositoryType "graphdb:SailRepository" ;
+      sr:sailImpl [
+         sail:sailType "graphdb:Sail" ;
+         
+         # GraphDB-specific configurations
+         owlim:base-URL "http://purl.glycoinfo.org/" ;
+         owlim:defaultNS "" ;
+         owlim:entity-index-size "10000000" ;
+         owlim:entity-id-size  "32" ;
+         owlim:imports "" ;
+         owlim:repository-type "file-repository" ;
+         owlim:ruleset "rdfs-plus-optimized" ;
+         owlim:storage-folder "storage" ;
+         
+         # Performance tuning for glycoinformatics data
+         owlim:enable-context-index "false" ;
+         owlim:enablePredicateList "true" ;
+         owlim:in-memory-literal-properties "true" ;
+         owlim:enable-literal-index "true" ;
+         owlim:check-for-inconsistencies "false" ;
+         owlim:disable-sameAs  "true" ;
+         
+         # Query optimization
+         owlim:query-timeout  "0" ;
+         owlim:query-limit-results  "0" ;
+         owlim:throw-QueryEvaluationException-on-timeout "false" ;
+         owlim:read-only "false" ;
+      ]
+   ] .

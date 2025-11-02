@@ -1,0 +1,1 @@
+print("Benchmark stub: integrate real benchmarks for spec→struct, KG query, and GoT.")

@@ -1,0 +1,36 @@
+# Lewis X Antigen in Human - Basic Query
+# Find Lewis X antigens and their protein associations in humans
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX uniprot: <http://purl.uniprot.org/uniprot/>
+PREFIX taxonomy: <http://purl.uniprot.org/taxonomy/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?glycan_id ?protein_id ?confidence ?tissue
+WHERE {
+  # Find Lewis X antigen structures
+  ?glycan a glyco:Oligosaccharide ;
+          glyco:hasGlyTouCanID ?glycan_id ;
+          glyco:hasMotif ?motif .
+          
+  # Filter for Lewis X pattern
+  FILTER(CONTAINS(LCASE(str(?motif)), "lewis"))
+         
+  # Find associated proteins in humans  
+  ?association a glyco:ProteinGlycanAssociation ;
+              glyco:hasGlycan ?glycan ;
+              glyco:hasProtein ?protein ;
+              glyco:foundIn taxonomy:9606 ;  # Homo sapiens
+              glyco:hasConfidenceScore ?confidence .
+              
+  ?protein glyco:hasUniProtID ?protein_id .
+  
+  # Get tissue information if available
+  OPTIONAL {
+    ?association glyco:expressedIn ?tissue_uri .
+    ?tissue_uri rdfs:label ?tissue .
+  }
+}
+ORDER BY DESC(?confidence)
+LIMIT 20

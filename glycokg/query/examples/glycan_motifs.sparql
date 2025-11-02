@@ -1,0 +1,60 @@
+# Glycan Structural Motif Analysis
+# Find glycans containing specific structural motifs and their relationships
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?motif_name ?glycan_id ?wurcs ?composition ?organisms ?tissues
+WHERE {
+  ?motif a glyco:GlycanMotif ;
+        rdfs:label ?motif_name .
+        
+  ?glycan a glyco:Oligosaccharide ;
+         glyco:hasMotif ?motif ;
+         glyco:hasGlyTouCanID ?glycan_id .
+         
+  # Filter for specific motifs of interest
+  FILTER(
+    CONTAINS(LCASE(?motif_name), "lewis") ||
+    CONTAINS(LCASE(?motif_name), "sialyl") ||
+    CONTAINS(LCASE(?motif_name), "core") ||
+    CONTAINS(LCASE(?motif_name), "lacto") ||
+    CONTAINS(LCASE(?motif_name), "blood group")
+  )
+  
+  OPTIONAL { ?glycan glyco:hasWURCSSequence ?wurcs }
+  
+  # Get composition summary
+  OPTIONAL {
+    ?glycan glyco:hasComposition ?comp .
+    ?comp glyco:hasHexCount ?hex ;
+          glyco:hasHexNAcCount ?hexnac ;
+          glyco:hasFucCount ?fuc .
+    BIND(CONCAT("Hex:", str(?hex), ",HexNAc:", str(?hexnac), ",Fuc:", str(?fuc)) AS ?composition)
+  }
+  
+  # Get organism distribution
+  OPTIONAL {
+    SELECT ?glycan_id (GROUP_CONCAT(DISTINCT ?org_name; separator="; ") AS ?organisms) WHERE {
+      ?association glyco:hasGlycan ?g2 ;
+                  glyco:foundIn ?organism .
+      ?g2 glyco:hasGlyTouCanID ?glycan_id .
+      ?organism rdfs:label ?org_name .
+    }
+    GROUP BY ?glycan_id
+  }
+  
+  # Get tissue distribution
+  OPTIONAL {
+    SELECT ?glycan_id (GROUP_CONCAT(DISTINCT ?tissue_name; separator="; ") AS ?tissues) WHERE {
+      ?association glyco:hasGlycan ?g3 ;
+                  glyco:expressedIn ?tissue .
+      ?g3 glyco:hasGlyTouCanID ?glycan_id .
+      ?tissue rdfs:label ?tissue_name .
+    }
+    GROUP BY ?glycan_id
+  }
+}
+ORDER BY ?motif_name ?glycan_id
+LIMIT 100

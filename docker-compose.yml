@@ -1,0 +1,222 @@
+version: '3.8'
+
+services:
+  # GraphDB for RDF/SPARQL knowledge graph storage
+  graphdb:
+    image: ontotext/graphdb:10.5.1
+    container_name: glyco-graphdb
+    ports:
+      - "7200:7200"
+    volumes:
+      - graphdb_data:/opt/graphdb/home
+      - ./infrastructure/graphdb/:/opt/graphdb/import
+    environment:
+      GDB_HEAP_SIZE: 4g
+      GDB_JAVA_OPTS: "-Dgraphdb.home=/opt/graphdb/home -Dgraphdb.workbench.cors.enable=true"
+    networks:
+      - glyco-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7200/rest/repositories"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+    restart: unless-stopped
+
+  # PostgreSQL for structured data storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: glyco-postgres
+    environment:
+      POSTGRES_DB: glycokg
+      POSTGRES_USER: glyco_admin
+      POSTGRES_PASSWORD: glyco_secure_pass_2025
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - glyco-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyco_admin -d glycokg"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: glyco-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - glyco-network
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  # Elasticsearch for text search and document indexing
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
+    container_name: glyco-elasticsearch
+    environment:
+      - node.name=glyco-es-node
+      - cluster.name=glyco-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - glyco-network
+    restart: unless-stopped
+
+  # MinIO for object storage (models, datasets, results)
+  minio:
+    image: minio/minio:latest
+    container_name: glyco-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: glyco_admin
+      MINIO_ROOT_PASSWORD: glyco_secure_pass_2025
+    command: server /data --console-address ":9001"
+    networks:
+      - glyco-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Jupyter Lab for development and experimentation
+  jupyterlab:
+    image: jupyter/datascience-notebook:latest
+    container_name: glyco-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./:/home/jovyan/work
+      - jupyter_data:/home/jovyan/.jupyter
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: "glycoinfo"
+    networks:
+      - glyco-network
+    restart: unless-stopped
+
+  # API Gateway (Traefik for development)
+  traefik:
+    image: traefik:v3.0
+    container_name: glyco-traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - glyco-network
+    restart: unless-stopped
+
+  # MongoDB for flexible document storage
+  mongodb:
+    image: mongo:7.0
+    container_name: glyco-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: glyco_admin
+      MONGO_INITDB_ROOT_PASSWORD: glyco_secure_pass_2025
+      MONGO_INITDB_DATABASE: glyco_results
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - glyco-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Application Server
+  glyco_api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: glyco-api
+    environment:
+      - DATABASE_URL=postgresql://glyco_admin:glyco_secure_pass_2025@postgres:5432/glycokg
+      - REDIS_URL=redis://redis:6379/0
+      - GRAPHDB_URL=http://graphdb:7200
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - MONGODB_URL=mongodb://glyco_admin:glyco_secure_pass_2025@mongodb:27017
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=glyco_admin
+      - MINIO_SECRET_KEY=glyco_secure_pass_2025
+      - PYTHONPATH=/app
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - glyco-network
+    depends_on:
+      - postgres
+      - redis
+      - graphdb
+      - elasticsearch
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  graphdb_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  minio_data:
+    driver: local
+  jupyter_data:
+    driver: local
+  mongodb_data:
+    driver: local
+
+networks:
+  glyco-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

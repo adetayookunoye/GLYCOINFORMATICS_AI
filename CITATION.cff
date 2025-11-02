@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Glyco Platform MVP: GlycoLLM, GlycoGoT, GlycoKG"
+authors:
+  - family-names: "Okunoye"
+    given-names: "Adetayo"
+abstract: "An MVP skeleton for a glycoinformatics platform integrating KG, LLM, and GoT."
+version: "0.1.0"

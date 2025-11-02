@@ -1,0 +1,28 @@
+{
+  "$id": "schema://spectra_v1",
+  "type": "object",
+  "required": ["spectrum_id","precursor_mz","peaks","metadata"],
+  "properties": {
+    "spectrum_id": {"type":"string"},
+    "precursor_mz": {"type":"number"},
+    "peaks": {
+      "type":"array",
+      "items": {
+        "type":"array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {"type":"number"}
+      }
+    },
+    "metadata": {
+      "type":"object",
+      "properties": {
+        "instrument":{"type":"string"},
+        "collision_energy":{"type":"number"},
+        "polarity":{"enum":["positive","negative"]},
+        "source":{"type":"string"},
+        "accession":{"type":"string"}
+      }
+    }
+  }
+}

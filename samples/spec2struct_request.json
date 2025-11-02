@@ -1,0 +1,28 @@
+{
+  "task": "spec2struct",
+  "spectra": {
+    "spectrum_id": "POST:2025_10_15_ABC",
+    "precursor_mz": 1560.72,
+    "peaks": [
+      [
+        204.09,
+        1234
+      ],
+      [
+        366.14,
+        480
+      ],
+      [
+        1381.55,
+        220
+      ]
+    ],
+    "metadata": {
+      "instrument": "QE-HFX",
+      "collision_energy": 28,
+      "polarity": "positive",
+      "source": "GlycoPOST",
+      "accession": "GPST:XYZ"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$id": "schema://glycan_v1",
+  "type": "object",
+  "required": ["glycan_id","notation","wurcs","graph","mass_monoisotopic"],
+  "properties": {
+    "glycan_id":{"type":"string"},
+    "notation":{"enum":["WURCS","GlycoCT","IUPAC"]},
+    "wurcs":{"type":"string"},
+    "graph":{"type":"object"},
+    "motifs":{"type":"array","items":{"type":"string"}},
+    "mass_monoisotopic":{"type":"number"},
+    "modifications":{"type":"array","items":{"type":"string"}}
+  }
+}

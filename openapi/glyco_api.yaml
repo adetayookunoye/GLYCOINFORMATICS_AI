@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info: {title: Glyco Platform API, version: 0.1.0}
+servers: [{url: http://localhost:8080}]
+paths:
+  /kg/query:
+    post:
+      summary: SPARQL proxy (read-only)
+      requestBody: {required: true, content: {application/sparql-query: {schema: {type: string}}}}
+      responses: {"200": {description: OK}}
+  /llm/infer:
+    post:
+      summary: Multi-modal inference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: {type: string}
+                spectra: {$ref: "schema://spectra_v1"}
+                glycan: {$ref: "schema://glycan_v1"}
+                task: {enum: ["qna","spec2struct","motif_detect","explain"]}
+      responses: {"200": {description: OK}}
+  /got/plan:
+    post:
+      summary: Graph-of-Thought planning
+      requestBody: {required: true, content: {application/json: {schema: {type: object, properties: {goal: {type: string}, inputs: {type: object}}}}}}
+      responses: {"200": {description: Returns structured reasoning plan}}
+components:
+  securitySchemes:
+    oidc: {type: openIdConnect, openIdConnectUrl: https://auth.glyco.ai/.well-known/openid-configuration}
+security: [{oidc: []}]

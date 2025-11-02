@@ -1,0 +1,14 @@
+policy_version: 1
+prohibited_requests:
+  - "design or optimize harmful biological agents or glycoengineered constructs"
+  - "wet-lab protocols enabling growth/amplification/evasion"
+allowed_contexts: ["literature summarization","education","benign analytics"]
+enforcement:
+  refusal_threshold: 0.35
+  log_policy_events: true
+  human_review_queue: true
+signals:
+  - {name: keyword_match, weight: 0.6}
+  - {name: KG_unsafe_concept_overlap, weight: 0.25}
+  - {name: anomalous_reasoning_chain, weight: 0.15}
+audit: {retain_days: 365, pii_redaction: true}

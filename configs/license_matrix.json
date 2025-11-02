@@ -1,0 +1,41 @@
+{
+  "license_matrix_version": 1,
+  "sources": [
+    {
+      "name": "GlyTouCan",
+      "license": "UNKNOWN",
+      "train_ok": true,
+      "redistribute_derivatives": false,
+      "weights_commercial_use": "restricted"
+    },
+    {
+      "name": "GlyGen",
+      "license": "UNKNOWN",
+      "train_ok": true,
+      "redistribute_derivatives": true,
+      "weights_commercial_use": "permitted"
+    },
+    {
+      "name": "GlycoPOST",
+      "license": "UNKNOWN",
+      "train_ok": true,
+      "redistribute_derivatives": false,
+      "weights_commercial_use": "restricted"
+    },
+    {
+      "name": "UniCarbKB",
+      "license": "UNKNOWN",
+      "train_ok": true,
+      "redistribute_derivatives": false,
+      "weights_commercial_use": "restricted"
+    },
+    {
+      "name": "CSDB",
+      "license": "UNKNOWN",
+      "train_ok": true,
+      "redistribute_derivatives": false,
+      "weights_commercial_use": "restricted"
+    }
+  ],
+  "block_on_unknown_license": true
+}

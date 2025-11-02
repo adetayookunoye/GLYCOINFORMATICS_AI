@@ -1,0 +1,34 @@
+# Mass Spectrometry Data Query
+# Find MS spectra associated with glycan structures
+
+PREFIX glyco: <https://glycokg.org/ontology#>
+PREFIX glycan: <https://glycokg.org/glycan/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?spectrum_id ?glycan_id ?precursor_mz ?charge ?collision_energy ?method ?confidence
+WHERE {
+  ?spectrum a glyco:MSSpectrum ;
+           glyco:hasSpectrumID ?spectrum_id ;
+           glyco:identifiesGlycan ?glycan ;
+           glyco:hasPrecursorMZ ?precursor_mz ;
+           glyco:hasChargeState ?charge .
+           
+  ?glycan glyco:hasGlyTouCanID ?glycan_id .
+  
+  OPTIONAL { ?spectrum glyco:hasCollisionEnergy ?collision_energy }
+  OPTIONAL { ?spectrum glyco:hasExperimentalMethod ?method }
+  
+  # Get confidence from associated experimental evidence
+  OPTIONAL {
+    ?evidence glyco:hasSpectrum ?spectrum ;
+             glyco:hasConfidenceScore ?confidence .
+  }
+  
+  # Filter by m/z range if needed (e.g., for typical glycan range)
+  FILTER(?precursor_mz >= 500.0 && ?precursor_mz <= 4000.0)
+  
+  # Filter by charge state (common for glycans: +1 to +4)
+  FILTER(?charge >= 1 && ?charge <= 4)
+}
+ORDER BY ?precursor_mz
+LIMIT 150

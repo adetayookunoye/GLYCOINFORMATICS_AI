@@ -1,0 +1,11 @@
+@prefix gly: <http://glyco.ai/schema#> .
+@prefix x: <http://example.org/> .
+
+x:g1 a gly:Glycan ;
+  gly:hasMotif "LewisX" ;
+  gly:observedInTaxon "NCBITaxon:9606" .
+
+x:assoc1 a gly:ProteinGlycanAssociation ;
+  gly:glycan x:g1 ;
+  gly:protein "UniProtKB:P12345" ;
+  gly:evidenceStrength "high" .

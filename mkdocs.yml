@@ -1,0 +1,4 @@
+site_name: Glyco Platform MVP
+nav:
+  - Home: index.md
+  - API: api.md
