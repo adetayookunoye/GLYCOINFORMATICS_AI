@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """
-Complete Massive Data Loading System - 200,000+ Records Per Service
-===================================================================
+DEPRECATED: Complete Massive Data Loading System (SYNTHETIC DATA)
+==================================================================
 
-Ultra-high performance system for loading substantial ML training data
-across all glycoinformatics platform services.
+⚠️  WARNING: THIS SCRIPT GENERATES SYNTHETIC DATA ONLY! ⚠️ 
+
+This script has been replaced by populate_real_data.py which uses 
+REAL experimental data from GlyTouCan, GlyGen, and GlycoPOST APIs.
+
+Use populate_real_data.py instead for authentic glycoinformatics data.
 
 Author: Glycoinformatics AI Team
 Date: November 2, 2025
+Status: DEPRECATED - Use populate_real_data.py for real data
 """
 
 import os
@@ -49,15 +54,52 @@ class AdvancedGlycanGenerator:
     def __init__(self, seed=42):
         self.rng = np.random.RandomState(seed)
         
-        # Extended monosaccharide database
+        # Comprehensive monosaccharide database with normalized frequencies
         self.monosaccharides = {
-            "Glc": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.25},
-            "Gal": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.20},
-            "Man": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.18},
-            "GlcNAc": {"mass": 221.208, "formula": "C8H15NO6", "frequency": 0.15},
-            "GalNAc": {"mass": 221.208, "formula": "C8H15NO6", "frequency": 0.10},
-            "Fuc": {"mass": 164.157, "formula": "C6H12O5", "frequency": 0.08},
-            "Neu5Ac": {"mass": 309.270, "formula": "C11H19NO9", "frequency": 0.04}
+            # Common hexoses
+            "Glc": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.195, "type": "hexose"},
+            "Gal": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.18, "type": "hexose"},
+            "Man": {"mass": 180.156, "formula": "C6H12O6", "frequency": 0.16, "type": "hexose"},
+            
+            # Amino sugars
+            "GlcNAc": {"mass": 221.208, "formula": "C8H15NO6", "frequency": 0.14, "type": "amino_sugar"},
+            "GalNAc": {"mass": 221.208, "formula": "C8H15NO6", "frequency": 0.12, "type": "amino_sugar"},
+            "ManNAc": {"mass": 221.208, "formula": "C8H15NO6", "frequency": 0.03, "type": "amino_sugar"},
+            
+            # Deoxy sugars
+            "Fuc": {"mass": 164.157, "formula": "C6H12O5", "frequency": 0.08, "type": "deoxy_sugar"},
+            "Rha": {"mass": 164.157, "formula": "C6H12O5", "frequency": 0.02, "type": "deoxy_sugar"},
+            
+            # Sialic acids
+            "Neu5Ac": {"mass": 309.270, "formula": "C11H19NO9", "frequency": 0.035, "type": "sialic_acid"},
+            "Neu5Gc": {"mass": 325.269, "formula": "C11H19NO10", "frequency": 0.005, "type": "sialic_acid"},
+            
+            # Pentoses
+            "Xyl": {"mass": 150.130, "formula": "C5H10O5", "frequency": 0.015, "type": "pentose"},
+            "Ara": {"mass": 150.130, "formula": "C5H10O5", "frequency": 0.01, "type": "pentose"},
+            
+            # Uronic acids
+            "GlcA": {"mass": 194.139, "formula": "C6H10O7", "frequency": 0.008, "type": "uronic_acid"},
+            "IdoA": {"mass": 194.139, "formula": "C6H10O7", "frequency": 0.002, "type": "uronic_acid"}  # Adjusted to sum to 1.0
+        }
+        
+        # Realistic glycosidic linkage patterns
+        self.linkage_patterns = {
+            "N-linked": [
+                "GlcNAc(β1-4)GlcNAc(β1-N)Asn",
+                "Man(α1-3)[Man(α1-6)]Man(β1-4)GlcNAc(β1-4)GlcNAc(β1-N)Asn",
+                "Gal(β1-4)GlcNAc(β1-2)Man(α1-3)[Gal(β1-4)GlcNAc(β1-2)Man(α1-6)]Man(β1-4)GlcNAc(β1-4)GlcNAc(β1-N)Asn",
+            ],
+            "O-linked": [
+                "GalNAc(α1-O)Ser/Thr",
+                "Gal(β1-3)GalNAc(α1-O)Ser/Thr", 
+                "Neu5Ac(α2-3)Gal(β1-3)GalNAc(α1-O)Ser/Thr",
+            ],
+            "glycolipid": [
+                "Glc(β1-1)Cer",
+                "Gal(β1-4)Glc(β1-1)Cer",
+                "GalNAc(β1-4)Gal(β1-4)Glc(β1-1)Cer"
+            ]
         }
         
         self.organisms = [
@@ -83,31 +125,21 @@ class AdvancedGlycanGenerator:
                 continue
             self.unique_ids.add(glycan_id)
             
-            # Generate realistic composition
-            num_residues = self.rng.randint(2, 15)  # 2-15 residues
-            composition = {}
+            # Generate realistic composition and properties
+            composition = self.generate_composition()
+            molecular_props = self.calculate_molecular_properties(composition)
             
-            # Select monosaccharides based on frequency
-            mono_names = list(self.monosaccharides.keys())
-            frequencies = [self.monosaccharides[mono]["frequency"] for mono in mono_names]
+            # Determine glycan type based on composition
+            glycan_type = "N-linked"
+            if "GalNAc" in composition and composition.get("GlcNAc", 0) < 2:
+                glycan_type = "O-linked"
+            elif "Cer" in str(composition):
+                glycan_type = "glycolipid"
             
-            for _ in range(num_residues):
-                mono = self.rng.choice(mono_names, p=frequencies)
-                composition[mono] = composition.get(mono, 0) + 1
-            
-            # Calculate mass
-            total_mass = 0
-            for mono, count in composition.items():
-                total_mass += self.monosaccharides[mono]["mass"] * count
-            
-            # Subtract water for glycosidic bonds
-            bonds = sum(composition.values()) - 1
-            mass_mono = total_mass - (bonds * 18.015)
-            mass_avg = mass_mono + self.rng.normal(0, 0.5)
-            
-            # Generate sequences
-            wurcs = f"WURCS=2.0/{len(composition)},{sum(composition.values())}/generated_{i}"
-            iupac_ext = "-".join([f"{mono}({count})" for mono, count in composition.items()])
+            # Generate realistic sequences
+            sequence = self.generate_glycan_sequence(glycan_type)
+            wurcs = f"WURCS=2.0/{len(composition)},{sum(composition.values())}/{hash(str(composition)) % 100000:05d}"
+            iupac_ext = sequence
             iupac_cond = "".join([f"{mono}{count}" for mono, count in composition.items()])
             
             # Select organism
@@ -118,9 +150,11 @@ class AdvancedGlycanGenerator:
                 "wurcs_sequence": wurcs,
                 "iupac_extended": iupac_ext,
                 "iupac_condensed": iupac_cond,
-                "mass_mono": round(mass_mono, 4),
-                "mass_avg": round(mass_avg, 4),
+                "mass_mono": molecular_props["mass_monoisotopic"],
+                "mass_avg": molecular_props["mass_average"],
+                "molecular_formula": molecular_props["molecular_formula"],
                 "composition": composition,
+                "glycan_type": glycan_type,
                 "organism_taxid": organism["taxid"],
                 "complexity": len(composition),
                 "created_at": datetime.now(),
@@ -131,6 +165,83 @@ class AdvancedGlycanGenerator:
         
         return batch
     
+    def generate_glycan_sequence(self, glycan_type="N-linked"):
+        """Generate realistic glycan sequence based on type"""
+        if glycan_type in self.linkage_patterns:
+            base_pattern = self.rng.choice(self.linkage_patterns[glycan_type])
+            return base_pattern
+        else:
+            # Generate custom sequence
+            mono_names = list(self.monosaccharides.keys())
+            frequencies = [self.monosaccharides[mono]["frequency"] for mono in mono_names]
+            num_residues = self.rng.randint(2, 12)
+            
+            sequence_parts = []
+            for i in range(num_residues):
+                mono = self.rng.choice(mono_names, p=frequencies)
+                linkage = self.rng.choice(["α", "β"])
+                position = self.rng.choice([1, 2, 3, 4, 6])
+                if i == 0:
+                    sequence_parts.append(mono)
+                else:
+                    sequence_parts.append(f"{mono}({linkage}1-{position})")
+            
+            return "".join(sequence_parts)
+    
+    def generate_composition(self):
+        """Generate realistic monosaccharide composition"""
+        composition = {}
+        mono_names = list(self.monosaccharides.keys())
+        frequencies = [self.monosaccharides[mono]["frequency"] for mono in mono_names]
+        
+        # Generate core composition (2-15 residues)
+        num_residues = self.rng.randint(2, 15)
+        
+        for _ in range(num_residues):
+            mono = self.rng.choice(mono_names, p=frequencies)
+            composition[mono] = composition.get(mono, 0) + 1
+        
+        return composition
+    
+    def calculate_molecular_properties(self, composition):
+        """Calculate accurate molecular properties"""
+        total_mass = 0
+        total_formula = {}
+        
+        for mono, count in composition.items():
+            mono_data = self.monosaccharides[mono]
+            total_mass += mono_data["mass"] * count
+            
+            # Parse formula
+            formula = mono_data["formula"]
+            elements = {"C": 0, "H": 0, "N": 0, "O": 0}
+            
+            import re
+            for element in elements.keys():
+                match = re.search(f"{element}(\d+)", formula)
+                if match:
+                    elements[element] = int(match.group(1)) * count
+            
+            for element, count_elem in elements.items():
+                total_formula[element] = total_formula.get(element, 0) + count_elem
+        
+        # Subtract water for glycosidic bonds
+        num_bonds = sum(composition.values()) - 1
+        mass_mono = total_mass - (num_bonds * 18.015)
+        
+        # Adjust formula for dehydration
+        total_formula["H"] -= num_bonds * 2
+        total_formula["O"] -= num_bonds
+        
+        formula_string = "".join([f"{elem}{count}" if count > 1 else elem 
+                                 for elem, count in sorted(total_formula.items()) if count > 0])
+        
+        return {
+            "mass_monoisotopic": round(mass_mono, 6),
+            "mass_average": round(mass_mono + self.rng.normal(0, 0.1), 6),
+            "molecular_formula": formula_string
+        }
+
     def generate_protein_associations_batch(self, batch_size: int, start_id: int, glycan_ids: List[str]) -> List[Dict[str, Any]]:
         """Generate batch of protein-glycan associations"""
         batch = []
@@ -161,25 +272,26 @@ class MassiveDataPipeline:
         self.config = {
             "postgres": {"host": "localhost", "port": 5432, "database": "glycokg", 
                         "user": "glyco_admin", "password": "glyco_secure_pass_2025"},
-            "mongodb": {"host": "localhost", "port": 27017, "database": "glyco_results",
-                       "username": "glyco_admin", "password": "glyco_secure_pass_2025"},
-            "redis": {"host": "localhost", "port": 6379, "db": 0}
+            "mongodb": {"host": "localhost", "port": 27017, "database": "glyco_results"},
+            "redis": {"host": "localhost", "port": 6379, "db": 0},
+            "minio": {"host": "localhost", "port": 9000},
+            "elasticsearch": {"host": "localhost", "port": 9200}
         }
         
         self.generator = AdvancedGlycanGenerator()
         self.progress = {
-            "postgresql": {"loaded": 0, "target": 200000},
-            "mongodb": {"loaded": 0, "target": 300000},
-            "redis": {"loaded": 0, "target": 50000},
-            "minio": {"loaded": 0, "target": 25000},
-            "elasticsearch": {"loaded": 0, "target": 250000}
+            "postgresql": {"loaded": 0, "target": 500000},
+            "mongodb": {"loaded": 0, "target": 600000},
+            "redis": {"loaded": 0, "target": 200000},
+            "minio": {"loaded": 0, "target": 100000},
+            "elasticsearch": {"loaded": 0, "target": 600000}
         }
         
         self.start_time = datetime.now()
         self.lock = threading.Lock()
     
     def load_postgresql_massive(self):
-        """Load 200,000+ glycan structures into PostgreSQL"""
+        """Load 300,000+ glycan structures into PostgreSQL"""
         logger.info("🐘 Loading massive PostgreSQL dataset...")
         
         try:
@@ -202,8 +314,8 @@ class MassiveDataPipeline:
             else:
                 source_id = result[0]
             
-            # Parallel batch loading
-            batch_size = 1000
+            # Ultra-performance parallel batch loading
+            batch_size = 2500  # Increased for 2M target
             total_batches = self.progress["postgresql"]["target"] // batch_size
             
             def load_batch(batch_idx):
@@ -239,12 +351,12 @@ class MassiveDataPipeline:
                     self.progress["postgresql"]["loaded"] += len(batch)
                     current = self.progress["postgresql"]["loaded"]
                     if current % 10000 == 0:
-                        logger.info(f"   PostgreSQL: {current:,}/200,000 loaded...")
+                        logger.info(f"   PostgreSQL: {current:,}/500,000 loaded...")
                 
                 return len(batch)
             
-            # Execute parallel loading
-            with ThreadPoolExecutor(max_workers=8) as executor:
+            # Execute ultra-performance parallel loading
+            with ThreadPoolExecutor(max_workers=12) as executor:
                 futures = [executor.submit(load_batch, i) for i in range(total_batches)]
                 total_loaded = sum(future.result() for future in as_completed(futures))
             
@@ -258,23 +370,24 @@ class MassiveDataPipeline:
             raise
     
     def load_mongodb_massive(self):
-        """Load 300,000+ documents into MongoDB"""
+        """Load 400,000+ documents into MongoDB"""
         logger.info("🍃 Loading massive MongoDB dataset...")
         
         try:
-            mongo_uri = f"mongodb://{self.config['mongodb']['username']}:{self.config['mongodb']['password']}@{self.config['mongodb']['host']}:{self.config['mongodb']['port']}"
+            mongo_uri = f"mongodb://glyco_admin:glyco_secure_pass_2025@{self.config['mongodb']['host']}:{self.config['mongodb']['port']}"
             client = pymongo.MongoClient(mongo_uri)
             db = client[self.config["mongodb"]["database"]]
             
             collections = {
-                "ml_training_experiments": 100000,
-                "advanced_analysis_results": 80000,
-                "protein_interaction_data": 70000,
-                "pathway_reconstruction_data": 50000
+                "ml_training_experiments": 180000,
+                "advanced_analysis_results": 150000,
+                "protein_interaction_data": 120000,
+                "pathway_reconstruction_data": 100000,
+                "glycan_metabolomics_data": 50000
             }
             
             def load_collection_batch(collection_name, doc_count, batch_idx, batch_size):
-                batch_client = pymongo.MongoClient(mongo_uri)
+                batch_client = pymongo.MongoClient(f"mongodb://glyco_admin:glyco_secure_pass_2025@{self.config['mongodb']['host']}:{self.config['mongodb']['port']}")
                 batch_db = batch_client[self.config["mongodb"]["database"]]
                 collection = batch_db[collection_name]
                 
@@ -340,7 +453,7 @@ class MassiveDataPipeline:
                             }
                         }
                     
-                    else:  # pathway_reconstruction_data
+                    elif collection_name == "pathway_reconstruction_data":
                         doc = {
                             "pathway_id": f"PATH_REC_{doc_id:08d}",
                             "glycans_involved": [f"G{(random.randint(0, 99999) + 200000):08d}" for _ in range(random.randint(3, 12))],
@@ -357,6 +470,27 @@ class MassiveDataPipeline:
                             },
                             "disease_associations": random.choice([None, "diabetes", "cancer", "alzheimer", "inflammatory"])
                         }
+                    else:  # glycan_metabolomics_data
+                        doc = {
+                            "metabolite_id": f"MET_{doc_id:08d}",
+                            "glycan_id": f"G{(doc_id % 100000 + 200000):08d}",
+                            "concentration_uM": random.uniform(0.1, 500.0),
+                            "tissue_type": random.choice(["liver", "brain", "muscle", "blood", "kidney"]),
+                            "metabolic_pathway": random.choice(["glycolysis", "gluconeogenesis", "pentose_phosphate", "glycogenesis"]),
+                            "nmr_data": {
+                                "chemical_shifts": [random.uniform(0.5, 12.0) for _ in range(random.randint(8, 25))],
+                                "coupling_constants": [random.uniform(2.0, 15.0) for _ in range(random.randint(3, 10))]
+                            },
+                            "ms_fragmentation": {
+                                "parent_ion": random.uniform(150, 2000),
+                                "fragments": [random.uniform(50, 1500) for _ in range(random.randint(5, 15))]
+                            },
+                            "physiological_conditions": {
+                                "ph": random.uniform(7.0, 7.8),
+                                "temperature": random.uniform(36.0, 38.0),
+                                "ionic_strength": random.uniform(0.1, 0.2)
+                            }
+                        }
                     
                     documents.append(doc)
                 
@@ -370,12 +504,12 @@ class MassiveDataPipeline:
                     self.progress["mongodb"]["loaded"] += len(documents)
                     current = self.progress["mongodb"]["loaded"]
                     if current % 25000 == 0:
-                        logger.info(f"   MongoDB: {current:,}/300,000 loaded...")
+                        logger.info(f"   MongoDB: {current:,}/600,000 loaded...")
                 
                 return len(documents)
             
             # Parallel loading for all collections
-            with ThreadPoolExecutor(max_workers=6) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = []
                 
                 for collection_name, doc_count in collections.items():
@@ -396,18 +530,18 @@ class MassiveDataPipeline:
             raise
     
     def load_redis_massive(self):
-        """Load 50,000+ cache entries into Redis"""
+        """Load 100,000+ cache entries into Redis"""
         logger.info("🔴 Loading massive Redis cache dataset...")
         
         try:
             r = redis.Redis(**self.config["redis"])
             
             cache_types = {
-                "ml_model_cache": 15000,
-                "frequent_queries": 10000,
-                "computation_results": 10000,
-                "user_session_data": 8000,
-                "api_response_cache": 7000
+                "ml_model_cache": 60000,
+                "frequent_queries": 50000,
+                "computation_results": 40000,
+                "user_session_data": 30000,
+                "api_response_cache": 20000
             }
             
             def load_cache_batch(cache_type, count, batch_idx, batch_size):
@@ -448,17 +582,17 @@ class MassiveDataPipeline:
                 with self.lock:
                     self.progress["redis"]["loaded"] += batch_size
                     current = self.progress["redis"]["loaded"]
-                    if current % 5000 == 0:
-                        logger.info(f"   Redis: {current:,}/50,000 loaded...")
+                    if current % 10000 == 0:
+                        logger.info(f"   Redis: {current:,}/200,000 loaded...")
                 
                 return batch_size
             
             # Parallel cache loading
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = []
                 
                 for cache_type, count in cache_types.items():
-                    batch_size = 500
+                    batch_size = 1000  # Increased for better Redis throughput
                     num_batches = count // batch_size
                     
                     for batch_idx in range(num_batches):
@@ -475,23 +609,23 @@ class MassiveDataPipeline:
             raise
     
     def load_minio_massive(self):
-        """Load 25,000+ files into MinIO"""
+        """Load 50,000+ files into MinIO"""
         logger.info("📦 Loading massive MinIO object dataset...")
         
         try:
             minio_client = Minio(
-                "localhost:9000",
+                f"{self.config['minio']['host']}:{self.config['minio']['port']}",
                 access_key="glyco_admin",
                 secret_key="glyco_secure_pass_2025", 
                 secure=False
             )
             
             buckets = {
-                "ml-training-datasets": 8000,
-                "model-artifacts": 7000,
-                "research-outputs": 5000,
-                "visualization-assets": 3000,
-                "backup-data": 2000
+                "ml-training-datasets": 30000,
+                "model-artifacts": 25000,
+                "research-outputs": 20000,
+                "visualization-assets": 15000,
+                "backup-data": 10000
             }
             
             def load_object_batch(bucket_name, count, batch_idx, batch_size):
@@ -542,8 +676,8 @@ class MassiveDataPipeline:
                 with self.lock:
                     self.progress["minio"]["loaded"] += batch_size
                     current = self.progress["minio"]["loaded"]
-                    if current % 2500 == 0:
-                        logger.info(f"   MinIO: {current:,}/25,000 loaded...")
+                    if current % 5000 == 0:
+                        logger.info(f"   MinIO: {current:,}/100,000 loaded...")
                 
                 return batch_size
             
@@ -553,7 +687,7 @@ class MassiveDataPipeline:
                     minio_client.make_bucket(bucket)
             
             # Parallel object loading
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=6) as executor:
                 futures = []
                 
                 for bucket_name, count in buckets.items():
@@ -571,13 +705,139 @@ class MassiveDataPipeline:
         except Exception as e:
             logger.error(f"❌ MinIO loading failed: {e}")
             raise
+
+    def load_elasticsearch_massive(self):
+        """Load 400,000+ documents into Elasticsearch"""
+        logger.info("🔍 Loading massive Elasticsearch dataset...")
+        
+        try:
+            es_client = Elasticsearch([f"http://{self.config['elasticsearch']['host']}:{self.config['elasticsearch']['port']}"])
+            
+            # Ensure indices exist
+            indices = {
+                "glycan_structures": 200000,
+                "research_publications": 150000, 
+                "experimental_data": 120000,
+                "pathway_analysis": 80000,
+                "protein_interactions": 50000
+            }
+            
+            def load_index_batch(index_name, doc_count, batch_idx, batch_size):
+                batch_client = Elasticsearch([f"http://{self.config['elasticsearch']['host']}:{self.config['elasticsearch']['port']}"])
+                
+                start_idx = batch_idx * batch_size
+                
+                docs = []
+                for i in range(batch_size):
+                    doc_id = start_idx + i
+                    
+                    if index_name == "glycan_structures":
+                        doc = {
+                            "structure_id": f"GLYCAN_{doc_id:06d}",
+                            "sequence": self.generator.generate_glycan_sequence(),
+                            "composition": self.generator.generate_composition(),
+                            "molecular_weight": random.uniform(500, 5000),
+                            "classification": random.choice(["N-linked", "O-linked", "Glycolipid"]),
+                            "organism": random.choice(["Human", "Mouse", "Yeast", "Bacterial"]),
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    elif index_name == "research_publications":
+                        doc = {
+                            "paper_id": f"PUB_{doc_id:06d}",
+                            "title": f"Glycoinformatics Analysis Study {doc_id}",
+                            "authors": [f"Author_{random.randint(1,100)}" for _ in range(random.randint(2,6))],
+                            "journal": random.choice(["Nature", "Science", "Cell", "Glycobiology"]),
+                            "year": random.randint(2020, 2025),
+                            "keywords": [f"keyword_{random.randint(1,50)}" for _ in range(random.randint(3,8))],
+                            "abstract": f"Advanced glycan analysis methodology {doc_id}",
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    elif index_name == "experimental_data":
+                        doc = {
+                            "experiment_id": f"EXP_{doc_id:06d}",
+                            "method": random.choice(["MS/MS", "NMR", "LC-MS", "HPLC"]),
+                            "sample_id": f"SAMPLE_{random.randint(1000,9999)}",
+                            "conditions": {"temperature": random.uniform(20,37), "pH": random.uniform(6.5,8.5)},
+                            "results": [random.uniform(0,100) for _ in range(random.randint(5,15))],
+                            "quality_score": random.uniform(0.8, 1.0),
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    elif index_name == "pathway_analysis":
+                        doc = {
+                            "pathway_id": f"PATH_{doc_id:06d}", 
+                            "name": f"Glycosylation Pathway {doc_id}",
+                            "enzymes": [f"ENZ_{random.randint(100,999)}" for _ in range(random.randint(3,8))],
+                            "substrates": [f"SUB_{random.randint(1,100)}" for _ in range(random.randint(2,5))],
+                            "products": [f"PROD_{random.randint(1,100)}" for _ in range(random.randint(1,3))],
+                            "regulation": random.choice(["Upregulated", "Downregulated", "Constitutive"]),
+                            "tissue_specificity": random.choice(["Liver", "Brain", "Muscle", "Ubiquitous"]),
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    else:  # protein_interactions
+                        doc = {
+                            "interaction_id": f"INT_{doc_id:06d}",
+                            "protein_a": f"PROT_{random.randint(1000,9999)}",
+                            "protein_b": f"PROT_{random.randint(1000,9999)}",
+                            "interaction_type": random.choice(["binding", "enzymatic", "regulatory"]),
+                            "confidence_score": random.uniform(0.7, 1.0),
+                            "evidence": random.choice(["experimental", "computational", "literature"]),
+                            "glycan_involved": f"GLYCAN_{random.randint(1,1000)}",
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    
+                    docs.append({"_index": index_name, "_id": f"{index_name}_{doc_id}", "_source": doc})
+                
+                # Bulk index documents with correct format
+                operations = []
+                for doc in docs:
+                    operations.extend([
+                        {"index": {"_index": doc["_index"], "_id": doc["_id"]}},
+                        doc["_source"]
+                    ])
+                
+                batch_client.bulk(operations=operations, refresh=False)
+                
+                with self.lock:
+                    self.progress["elasticsearch"]["loaded"] += batch_size
+                    current = self.progress["elasticsearch"]["loaded"]
+                    if current % 15000 == 0:
+                        logger.info(f"   Elasticsearch: {current:,}/600,000 loaded...")
+            
+            total_loaded = 0
+            
+            # Create indices if they don't exist
+            for index_name in indices.keys():
+                if not es_client.indices.exists(index=index_name):
+                    es_client.indices.create(index=index_name)
+            
+            # Load each index in ultra-parallel batches
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                futures = []
+                for index_name, doc_count in indices.items():
+                    batch_size = 1500  # Optimized for Elasticsearch bulk operations
+                    total_batches = doc_count // batch_size
+                    
+                    for batch_idx in range(total_batches):
+                        future = executor.submit(load_index_batch, index_name, doc_count, batch_idx, batch_size)
+                        futures.append(future)
+                
+                # Wait for completion
+                for future in futures:
+                    future.result()
+                    total_loaded += 1000
+            
+            logger.info(f"✅ Elasticsearch loading complete: {total_loaded:,} documents")
+            
+        except Exception as e:
+            logger.error(f"❌ Elasticsearch loading failed: {e}")
+            raise
     
     def print_massive_progress(self):
         """Print comprehensive progress for massive loading"""
         elapsed = (datetime.now() - self.start_time).total_seconds()
         
         print("\n" + "="*120)
-        print("🚀 MASSIVE DATA LOADING PROGRESS - 200,000+ RECORDS PER SERVICE")
+        print("🚀 ULTRA-MASSIVE DATA LOADING PROGRESS - 1,000,000+ GLYCAN RECORDS")
         print("="*120)
         print(f"⏱️  Elapsed: {elapsed:.1f}s ({elapsed/60:.1f} min)")
         print(f"📅 Time: {datetime.now().strftime('%H:%M:%S')}")
@@ -609,17 +869,18 @@ class MassiveDataPipeline:
     
     async def execute_massive_loading(self):
         """Execute the complete massive loading pipeline"""
-        logger.info("🚀 Starting MASSIVE DATA LOADING - 200,000+ per service")
-        logger.info("🎯 Total target: 825,000+ records across all services")
+        logger.info("🚀 Starting ULTRA-MASSIVE DATA LOADING - 2,000,000+ glycan records")
+        logger.info("🎯 Total target: 2,000,000+ records across all services")
         print()
         
-        # Execute parallel loading across all services
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        # Execute ultra-parallel loading across all services
+        with ThreadPoolExecutor(max_workers=8) as executor:
             futures = [
                 executor.submit(self.load_postgresql_massive),
                 executor.submit(self.load_mongodb_massive),
                 executor.submit(self.load_redis_massive),
-                executor.submit(self.load_minio_massive)
+                executor.submit(self.load_minio_massive),
+                executor.submit(self.load_elasticsearch_massive)
             ]
             
             # Monitor progress
@@ -638,12 +899,23 @@ class MassiveDataPipeline:
         logger.info("🧬 Platform ready for advanced ML training and research!")
 
 def main():
-    """Execute massive data loading"""
-    print("🧬 GLYCOINFORMATICS AI - MASSIVE DATA LOADING SYSTEM")
+    """Execute massive data loading - DEPRECATED SYNTHETIC DATA VERSION"""
+    print("⚠️  WARNING: THIS SCRIPT GENERATES SYNTHETIC DATA ONLY! ⚠️")
     print("=" * 80)
-    print("🎯 Loading 200,000+ unique records per service")
+    print("🚫 DEPRECATED: This script has been replaced by populate_real_data.py")
+    print("🔬 For REAL experimental data, use: python populate_real_data.py")
+    print("📊 Real data sources: GlyTouCan, GlyGen, GlycoPOST APIs")
+    print("=" * 80)
+    
+    response = input("Do you want to continue with SYNTHETIC data? (y/N): ").strip().lower()
+    if response != 'y':
+        print("✅ Good choice! Use populate_real_data.py for real data instead.")
+        return
+    
+    print("\n🧬 CONTINUING WITH SYNTHETIC DATA (DEPRECATED)")
+    print("🎯 Loading 1,000,000+ SYNTHETIC glycan records")
     print("⚡ Ultra-high performance parallel processing")
-    print("🔬 ML/AI training grade datasets")
+    print("🔬 Production-grade SYNTHETIC datasets for testing only")
     print()
     
     pipeline = MassiveDataPipeline()

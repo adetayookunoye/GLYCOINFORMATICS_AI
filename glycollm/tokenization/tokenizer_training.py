@@ -15,12 +15,14 @@ from collections import Counter, defaultdict
 import random
 
 # Optional imports that will be available when packages are installed
-try:
-    from tokenizers import Tokenizer, models, trainers, pre_tokenizers, processors
-    from tokenizers.implementations import ByteLevelBPETokenizer
-    HAS_TOKENIZERS = True
-except ImportError:
-    HAS_TOKENIZERS = False
+# Moved to lazy import to avoid TensorFlow loading
+# try:
+#     from tokenizers import Tokenizer, models, trainers, pre_tokenizers, processors
+#     from tokenizers.implementations import ByteLevelBPETokenizer
+#     HAS_TOKENIZERS = True
+# except ImportError:
+#     HAS_TOKENIZERS = False
+HAS_TOKENIZERS = False  # Will be set to True when tokenizers are actually imported
 
 from .glyco_tokenizer import TokenizationConfig
 from .tokenizer_utils import (
@@ -78,6 +80,27 @@ class TokenizerTrainer:
     Handles corpus preparation, vocabulary building, and tokenizer training
     for multimodal glycan data.
     """
+    
+    def _import_tokenizers(self):
+        """Lazy import of tokenizers to avoid TensorFlow loading."""
+        global HAS_TOKENIZERS
+        if not HAS_TOKENIZERS:
+            try:
+                import tokenizers
+                from tokenizers import Tokenizer, models, trainers, pre_tokenizers, processors
+                from tokenizers.implementations import ByteLevelBPETokenizer
+                HAS_TOKENIZERS = True
+                # Store references for use in methods
+                self._Tokenizer = Tokenizer
+                self._models = models
+                self._trainers = trainers
+                self._pre_tokenizers = pre_tokenizers
+                self._processors = processors
+                self._ByteLevelBPETokenizer = ByteLevelBPETokenizer
+            except ImportError as e:
+                raise ImportError(f"Failed to import tokenizers: {e}")
+        return (self._Tokenizer, self._models, self._trainers, 
+                self._pre_tokenizers, self._processors, self._ByteLevelBPETokenizer)
     
     def __init__(self, 
                  tokenization_config: Optional[TokenizationConfig] = None,
@@ -275,7 +298,7 @@ class TokenizerTrainer:
         
     def train_tokenizer(self, 
                        corpus: Optional[List[str]] = None,
-                       vocab_dict: Optional[Dict[str, int]] = None) -> 'Tokenizer':
+                       vocab_dict: Optional[Dict[str, int]] = None):
         """
         Train the base tokenizer using BPE.
         
@@ -286,8 +309,8 @@ class TokenizerTrainer:
         Returns:
             Trained tokenizer
         """
-        if not HAS_TOKENIZERS:
-            raise ImportError("tokenizers library not installed. Run: pip install tokenizers")
+        # Lazy import tokenizers
+        Tokenizer, models, trainers, pre_tokenizers, processors, ByteLevelBPETokenizer = self._import_tokenizers()
             
         if corpus is None:
             corpus = self.training_corpus
@@ -331,7 +354,7 @@ class TokenizerTrainer:
                 
         return tokenizer
         
-    def evaluate_tokenizer(self, tokenizer: 'Tokenizer', 
+    def evaluate_tokenizer(self, tokenizer, 
                          test_corpus: Optional[List[str]] = None) -> TrainingStats:
         """
         Evaluate trained tokenizer performance.
@@ -343,8 +366,8 @@ class TokenizerTrainer:
         Returns:
             Evaluation statistics
         """
-        if not HAS_TOKENIZERS:
-            raise ImportError("tokenizers library not installed")
+        # Lazy import tokenizers
+        Tokenizer, models, trainers, pre_tokenizers, processors, ByteLevelBPETokenizer = self._import_tokenizers()
             
         if test_corpus is None:
             test_corpus = self.validation_corpus
@@ -405,7 +428,7 @@ class TokenizerTrainer:
         return stats
         
     def save_training_artifacts(self, 
-                              tokenizer: 'Tokenizer',
+                              tokenizer,
                               output_dir: str,
                               save_corpus: bool = True):
         """
@@ -419,9 +442,10 @@ class TokenizerTrainer:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        # Save tokenizer
-        tokenizer_path = output_path / "tokenizer.json"
-        tokenizer.save(str(tokenizer_path))
+        # Save tokenizer if available
+        if tokenizer is not None:
+            tokenizer_path = output_path / "tokenizer.json"
+            tokenizer.save(str(tokenizer_path))
         
         # Save configurations
         tokenization_config_path = output_path / "tokenization_config.json"

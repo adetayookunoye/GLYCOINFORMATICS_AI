@@ -51,6 +51,7 @@ class LLMType(Enum):
     MISTRAL_7B = "mistralai/Mistral-7B-v0.1"
     BIOMISTRAL = "BioMistral/BioMistral-7B"
     SCIGPT = "AI4Science/SciGPT"
+    TINYLLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
 class FineTuningMethod(Enum):
@@ -67,8 +68,8 @@ class LLMFineTuningConfig:
     """Configuration for LLM fine-tuning."""
     
     # Model selection
-    model_name: str = "google/flan-t5-base"
-    model_type: LLMType = LLMType.FLAN_T5_BASE
+    model_name: str = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    model_type: LLMType = LLMType.TINYLLAMA
     
     # Fine-tuning method
     method: FineTuningMethod = FineTuningMethod.LORA
@@ -97,6 +98,16 @@ class LLMFineTuningConfig:
     max_sequence_length: int = 512
     truncation: bool = True
     padding: bool = True
+    
+    # Task-specific configurations
+    task_type: str = "general"  # spec2struct, structure2spec, explain, retrieval
+    enable_uncertainty: bool = True
+    enable_grounding: bool = True
+    
+    # Specialized model components
+    use_task_specific_heads: bool = True
+    cross_modal_attention: bool = True
+    uncertainty_estimation: bool = True
     
     # Output directory
     output_dir: str = "./llm_checkpoints"
@@ -698,8 +709,8 @@ def load_llm_fine_tuning_config(config_path: Optional[str] = None) -> LLMFineTun
             
     # Return default configuration optimized for glycomics
     return LLMFineTuningConfig(
-        model_name="google/flan-t5-base",  # Good balance of performance and size
-        model_type=LLMType.FLAN_T5_BASE,
+        model_name="TinyLlama/TinyLlama-1.1B-Chat-v1.0",  # Small, fast model for glycomics
+        model_type=LLMType.TINYLLAMA,
         method=FineTuningMethod.LORA,  # Memory efficient
         lora_rank=16,
         lora_alpha=32,

@@ -734,10 +734,10 @@ class MultimodalDatasetBuilder:
         logger.info(f"Loaded {len(structure_data)} structures")
         return structure_data
         
-    def _create_multimodal_samples(self, 
-                                 text_data: List[Dict], 
+    def _create_multimodal_samples(self,
+                                 text_data: List[Dict],
                                  spectra_data: List[Dict],
-                                 structure_data: List[Dict]]):
+                                 structure_data: List[Dict]):
         """Create aligned multimodal samples"""
         
         # Index data by identifiers

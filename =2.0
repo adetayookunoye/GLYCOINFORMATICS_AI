@@ -1,0 +1,21 @@
+Requirement already satisfied: pydantic in /home/adetayo/anaconda3/lib/python3.12/site-packages (2.8.2)
+Requirement already satisfied: fastapi in /home/adetayo/anaconda3/lib/python3.12/site-packages (0.120.4)
+Requirement already satisfied: uvicorn in /home/adetayo/anaconda3/lib/python3.12/site-packages (0.38.0)
+Requirement already satisfied: httpx in /home/adetayo/anaconda3/lib/python3.12/site-packages (0.27.0)
+Collecting python-multipart
+  Downloading python_multipart-0.0.20-py3-none-any.whl.metadata (1.8 kB)
+Requirement already satisfied: annotated-types>=0.4.0 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from pydantic) (0.7.0)
+Requirement already satisfied: pydantic-core==2.20.1 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from pydantic) (2.20.1)
+Requirement already satisfied: typing-extensions>=4.6.1 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from pydantic) (4.15.0)
+Requirement already satisfied: starlette<0.50.0,>=0.40.0 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from fastapi) (0.49.3)
+Requirement already satisfied: annotated-doc>=0.0.2 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from fastapi) (0.0.3)
+Requirement already satisfied: click>=7.0 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from uvicorn) (8.1.7)
+Requirement already satisfied: h11>=0.8 in /home/adetayo/anaconda3/lib/python3.12/site-packages (from uvicorn) (0.14.0)
+Requirement already satisfied: anyio in /home/adetayo/anaconda3/lib/python3.12/site-packages (from httpx) (4.4.0)
+Requirement already satisfied: certifi in /home/adetayo/anaconda3/lib/python3.12/site-packages (from httpx) (2025.10.5)
+Requirement already satisfied: httpcore==1.* in /home/adetayo/anaconda3/lib/python3.12/site-packages (from httpx) (1.0.5)
+Requirement already satisfied: idna in /home/adetayo/anaconda3/lib/python3.12/site-packages (from httpx) (3.7)
+Requirement already satisfied: sniffio in /home/adetayo/anaconda3/lib/python3.12/site-packages (from httpx) (1.3.1)
+Downloading python_multipart-0.0.20-py3-none-any.whl (24 kB)
+Installing collected packages: python-multipart
+Successfully installed python-multipart-0.0.20

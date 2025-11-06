@@ -1,0 +1,30 @@
+to copy files into sapelo
+cp -r /usr/local/training/Bowtie2/* .
+
+1. to list all the directory
+pwd
+
+2. Go to your own srcatch
+cd /scratch/aoo29179
+
+3. to make a new directory
+mkdir workdir
+
+4. to copy files into sapelo
+cp -r /usr/local/training/Bowtie2/* .
+
+5. Make a submission script
+nano sub.sh
+
+6. submit your job
+sbatch sub.sh
+
+7. check status of running jobs:squeue/sq --me or using sacct-gacrc -X
+sq --me OR sacct-gacrc -X
+
+8. scancel to cancel the running job
+scancel jobid
+
+9. Check resource usage of running job
+seff jobid
+

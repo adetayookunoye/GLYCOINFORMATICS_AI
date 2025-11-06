@@ -14,8 +14,6 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import numpy as np
 from collections import defaultdict, Counter
-from tokenizers import Tokenizer, models, pre_tokenizers, processors, decoders
-from tokenizers.trainers import BpeTrainer, WordLevelTrainer
 import torch
 
 logger = logging.getLogger(__name__)
@@ -562,8 +560,8 @@ class GlycoTokenizer:
         self.token_to_id = {token: idx for idx, token in enumerate(self.vocab)}
         self.id_to_token = {idx: token for token, idx in self.token_to_id.items()}
         
-        # Base tokenizer for regular text
-        self.base_tokenizer = self._create_base_tokenizer()
+        # Base tokenizer for regular text - created lazily to avoid TensorFlow loading
+        self.base_tokenizer = None
         
     def _build_vocabulary(self) -> List[str]:
         """Build complete vocabulary including all special tokens"""
@@ -611,8 +609,16 @@ class GlycoTokenizer:
         
         return vocab
         
-    def _create_base_tokenizer(self) -> Tokenizer:
+    def _create_base_tokenizer(self) -> Any:
         """Create base tokenizer for regular text"""
+        # Lazy import to avoid TensorFlow loading
+        try:
+            from tokenizers import Tokenizer, models, pre_tokenizers, processors, decoders
+            from tokenizers.trainers import BpeTrainer, WordLevelTrainer
+        except ImportError as e:
+            logger.warning(f"Tokenizers library not available: {e}")
+            return None
+            
         # Use BPE for subword tokenization
         tokenizer = Tokenizer(models.BPE())
         
@@ -660,9 +666,17 @@ class GlycoTokenizer:
             # Preprocess and tokenize
             preprocessed_text = self.text_tokenizer.preprocess_text(text)
             
-            # Use base tokenizer for regular words
-            encoded = self.base_tokenizer.encode(preprocessed_text)
-            text_tokens.extend(encoded.tokens)
+            # Use base tokenizer for regular words if available
+            if self.base_tokenizer is None:
+                self.base_tokenizer = self._create_base_tokenizer()
+                
+            if self.base_tokenizer is not None:
+                encoded = self.base_tokenizer.encode(preprocessed_text)
+                text_tokens.extend(encoded.tokens)
+            else:
+                # Fallback: simple whitespace tokenization
+                words = preprocessed_text.split()
+                text_tokens.extend(words)
             
             text_tokens.append(self.config.text_end)
             
@@ -733,9 +747,10 @@ class GlycoTokenizer:
         with open(vocab_path, 'w') as f:
             json.dump(self.token_to_id, f, indent=2)
             
-        # Save base tokenizer
-        tokenizer_path = save_path / "tokenizer.json"
-        self.base_tokenizer.save(str(tokenizer_path))
+        # Save base tokenizer if it exists
+        if self.base_tokenizer is not None:
+            tokenizer_path = save_path / "tokenizer.json"
+            self.base_tokenizer.save(str(tokenizer_path))
         
         logger.info(f"Tokenizer saved to {save_directory}")
         
@@ -754,9 +769,15 @@ class GlycoTokenizer:
         # Create tokenizer instance
         tokenizer = cls(config)
         
-        # Load base tokenizer
+        # Load base tokenizer if it exists
         tokenizer_path = model_path / "tokenizer.json"
-        tokenizer.base_tokenizer = Tokenizer.from_file(str(tokenizer_path))
+        if tokenizer_path.exists():
+            try:
+                from tokenizers import Tokenizer
+                tokenizer.base_tokenizer = Tokenizer.from_file(str(tokenizer_path))
+            except ImportError as e:
+                logger.warning(f"Could not load base tokenizer: {e}")
+                tokenizer.base_tokenizer = None
         
         logger.info(f"Tokenizer loaded from {model_directory}")
         return tokenizer

@@ -256,6 +256,35 @@ init-data:
 	@$(PYTHON) scripts/init_sample_data.py
 	@echo "Sample data loaded. Check GraphDB at http://localhost:7200"
 
+# ============================================================================
+# MODEL TRAINING (Production Ready with Docker)
+# ============================================================================
+
+# Build the GPU-enabled training image
+build-training:
+	@echo "🏭 Building GPU training image: $(DOCKER_REGISTRY)/$(PROJECT_NAME)-train:$(VERSION)..."
+	@docker build -f docker/train.Dockerfile -t $(DOCKER_REGISTRY)/$(PROJECT_NAME)-train:$(VERSION) .
+	@echo "✅ Training image built successfully!"
+
+# Run the fine-tuning process inside a Docker container with GPU access
+train-gpu:
+	@echo "🚀 Starting GPU-accelerated model training..."
+	@echo "Container will be removed after completion."
+	@docker run --rm --gpus all \
+		-v $(shell pwd)/data:/app/data \
+		-v $(shell pwd)/models:/app/models \
+		-v $(shell pwd)/results:/app/results \
+		$(DOCKER_REGISTRY)/$(PROJECT_NAME)-train:$(VERSION)
+	@echo "✅ Training complete!"
+
+# Run training locally using the configured Conda environment
+train-local:
+	@echo "🚀 Starting local model training using Conda environment 'glycoenv'..."
+	@echo "Make sure 'glycoenv' is properly configured."
+	@bash -c 'source $$(conda info --base)/etc/profile.d/conda.sh && conda activate glycoenv && python scripts/integrate_glycoworks_training.py'
+	@echo "✅ Local training complete!"
+
+
 # Development helpers
 # ============================================================================
 # DATABASE OPERATIONS (Production Ready)

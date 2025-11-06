@@ -1,0 +1,96 @@
+{
+  "platform_status": {
+    "platform_mode": "basic",
+    "components_loaded": [],
+    "uptime": 75784.175791502,
+    "version": "0.1.0",
+    "services": {}
+  },
+  "structure_analysis": {
+    "success": true,
+    "data": {
+      "analysis_result": "Basic analysis placeholder - platform components not loaded",
+      "structure": "GlcNAc(\u03b21-2)Man(\u03b11-6)[GlcNAc(\u03b21-2)Man(\u03b11-3)]Man(\u03b21-4)GlcNAc(\u03b21-4)[Fuc(\u03b11-6)]GlcNAc",
+      "structure_format": "WURCS",
+      "note": "Running in basic mode"
+    },
+    "execution_time": 2.6226043701171875e-06
+  },
+  "llm_inference": {
+    "status": "ok",
+    "task": null,
+    "confidence": 0.4,
+    "result": {
+      "summary": "MVP result placeholder; integrate real models."
+    },
+    "grounding": [
+      "glycan:GLYCAN_000001",
+      "protein:UniProtKB:P12345"
+    ]
+  },
+  "got_planning": {
+    "goal": "Comprehensive glycan analysis with database integration",
+    "steps": [
+      {
+        "id": "s1",
+        "op": "decompose_spectrum",
+        "inputs": [
+          "spectra"
+        ],
+        "outputs": [
+          "candidate_fragments"
+        ],
+        "confidence": 0.86
+      },
+      {
+        "id": "s2",
+        "op": "motif_lookup",
+        "inputs": [
+          "candidate_fragments"
+        ],
+        "uses": "GlycoKG",
+        "outputs": [
+          "motif_hits"
+        ]
+      },
+      {
+        "id": "s3",
+        "op": "pathway_consistency_check",
+        "inputs": [
+          "motif_hits",
+          "organism"
+        ],
+        "outputs": [
+          "filtered_candidates"
+        ]
+      },
+      {
+        "id": "s4",
+        "op": "llm_rationale",
+        "inputs": [
+          "filtered_candidates"
+        ],
+        "outputs": [
+          "explanation"
+        ],
+        "audit_log": true
+      }
+    ],
+    "metrics": {
+      "beam_width": 10,
+      "max_steps": 8
+    },
+    "uncertainty": {
+      "type": "mc_dropout",
+      "samples": 20
+    }
+  },
+  "reasoning": {
+    "success": true,
+    "data": {
+      "reasoning_result": "Basic response to: What are the functional implications of core fucosylation in IgG N-glycans?",
+      "note": "Running in basic mode - full reasoning not available"
+    },
+    "execution_time": 4.0531158447265625e-06
+  }
+}

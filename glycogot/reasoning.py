@@ -956,6 +956,482 @@ class GlycoGOTReasoner:
                 explanation += f"{i}. {hypothesis} (confidence: {confidence:.2f})\n"
                 
         return explanation
+    
+    def rank_candidates(self, 
+                       candidates: List[Dict[str, Any]], 
+                       ranking_method: str = "confidence",
+                       context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """
+        Advanced candidate ranking with multiple criteria.
+        
+        Args:
+            candidates: List of prediction candidates
+            ranking_method: Ranking strategy (confidence, consensus, evidence, hybrid)
+            context: Additional context for ranking decisions
+            
+        Returns:
+            Ranked list of candidates
+        """
+        if not candidates:
+            return []
+        
+        logger.info(f"Ranking {len(candidates)} candidates using {ranking_method} method")
+        
+        if ranking_method == "confidence":
+            return self._rank_by_confidence(candidates)
+        elif ranking_method == "consensus":
+            return self._rank_by_consensus(candidates, context)
+        elif ranking_method == "evidence":
+            return self._rank_by_evidence(candidates)
+        elif ranking_method == "hybrid":
+            return self._rank_by_hybrid_score(candidates, context)
+        elif ranking_method == "uncertainty_aware":
+            return self._rank_by_uncertainty_awareness(candidates)
+        else:
+            logger.warning(f"Unknown ranking method: {ranking_method}, using confidence")
+            return self._rank_by_confidence(candidates)
+    
+    def _rank_by_confidence(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Rank candidates by confidence score."""
+        return sorted(candidates, 
+                     key=lambda c: c.get('confidence', 0.0), 
+                     reverse=True)
+    
+    def _rank_by_consensus(self, 
+                          candidates: List[Dict[str, Any]], 
+                          context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """Rank candidates by cross-modal consensus."""
+        for candidate in candidates:
+            consensus_score = self._calculate_consensus_score(candidate, context)
+            candidate['consensus_score'] = consensus_score
+            candidate['ranking_score'] = (
+                0.6 * candidate.get('confidence', 0.0) + 
+                0.4 * consensus_score
+            )
+        
+        return sorted(candidates, 
+                     key=lambda c: c['ranking_score'], 
+                     reverse=True)
+    
+    def _rank_by_evidence(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Rank candidates by supporting evidence strength."""
+        for candidate in candidates:
+            evidence_score = self._calculate_evidence_strength(candidate)
+            candidate['evidence_score'] = evidence_score
+            candidate['ranking_score'] = (
+                0.5 * candidate.get('confidence', 0.0) + 
+                0.5 * evidence_score
+            )
+        
+        return sorted(candidates, 
+                     key=lambda c: c['ranking_score'], 
+                     reverse=True)
+    
+    def _rank_by_hybrid_score(self, 
+                             candidates: List[Dict[str, Any]], 
+                             context: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """Rank using hybrid scoring combining multiple factors."""
+        for candidate in candidates:
+            # Calculate individual scores
+            confidence = candidate.get('confidence', 0.0)
+            evidence_score = self._calculate_evidence_strength(candidate)
+            consensus_score = self._calculate_consensus_score(candidate, context)
+            novelty_score = self._calculate_novelty_score(candidate)
+            
+            # Weighted hybrid score
+            hybrid_score = (
+                0.4 * confidence +
+                0.25 * evidence_score + 
+                0.2 * consensus_score +
+                0.15 * novelty_score
+            )
+            
+            candidate['hybrid_score'] = hybrid_score
+            candidate['ranking_score'] = hybrid_score
+        
+        return sorted(candidates, 
+                     key=lambda c: c['ranking_score'], 
+                     reverse=True)
+    
+    def _rank_by_uncertainty_awareness(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Rank candidates considering uncertainty and reliability."""
+        for candidate in candidates:
+            confidence = candidate.get('confidence', 0.0)
+            uncertainty = candidate.get('uncertainty', {})
+            
+            # Penalize high uncertainty
+            epistemic_penalty = uncertainty.get('epistemic_uncertainty', 0.0)
+            aleatoric_penalty = uncertainty.get('aleatoric_uncertainty', 0.0)
+            
+            # Reward prediction interval tightness
+            interval = uncertainty.get('prediction_interval', {})
+            interval_width = interval.get('upper', 1.0) - interval.get('lower', 0.0)
+            sharpness_reward = 1.0 - interval_width
+            
+            # Calculate uncertainty-aware score
+            uncertainty_score = (
+                confidence - 
+                0.3 * epistemic_penalty - 
+                0.2 * aleatoric_penalty + 
+                0.1 * sharpness_reward
+            )
+            
+            candidate['uncertainty_score'] = max(0.0, uncertainty_score)
+            candidate['ranking_score'] = candidate['uncertainty_score']
+        
+        return sorted(candidates, 
+                     key=lambda c: c['ranking_score'], 
+                     reverse=True)
+    
+    def _calculate_consensus_score(self, 
+                                  candidate: Dict[str, Any], 
+                                  context: Dict[str, Any] = None) -> float:
+        """Calculate cross-modal consensus score."""
+        if not context:
+            return 0.5
+        
+        # Check agreement across modalities
+        modal_predictions = context.get('modal_predictions', {})
+        if len(modal_predictions) < 2:
+            return 0.5
+        
+        # Simple agreement calculation
+        agreements = []
+        candidate_structure = candidate.get('structure', '')
+        
+        for modality, prediction in modal_predictions.items():
+            if isinstance(prediction, str):
+                # Simple string similarity
+                similarity = len(set(candidate_structure.split()) & 
+                               set(prediction.split())) / max(1, len(set(prediction.split())))
+                agreements.append(similarity)
+        
+        return sum(agreements) / len(agreements) if agreements else 0.5
+    
+    def _calculate_evidence_strength(self, candidate: Dict[str, Any]) -> float:
+        """Calculate supporting evidence strength."""
+        grounding = candidate.get('grounding', {})
+        
+        # Count high-confidence grounding evidence
+        total_evidence = 0
+        strong_evidence = 0
+        
+        for evidence_type in ['structural_motifs', 'enzymes', 'pathways', 'organisms']:
+            evidence_list = grounding.get(evidence_type, [])
+            for evidence in evidence_list:
+                total_evidence += 1
+                if evidence.get('confidence', 0.0) > 0.7:
+                    strong_evidence += 1
+        
+        return strong_evidence / max(1, total_evidence)
+    
+    def _calculate_novelty_score(self, candidate: Dict[str, Any]) -> float:
+        """Calculate novelty/diversity score."""
+        # Simple novelty estimation based on structure complexity
+        structure = candidate.get('structure', '')
+        
+        # Count unique components
+        unique_chars = len(set(structure))
+        length = len(structure)
+        
+        # Normalize novelty score
+        novelty = min(1.0, unique_chars / max(1, length * 0.3))
+        return novelty
+    
+    def generate_actionable_recommendations(self, 
+                                         candidates: List[Dict[str, Any]],
+                                         uncertainty_metrics: Dict[str, Any],
+                                         task_type: str = "general") -> List[Dict[str, Any]]:
+        """
+        Generate actionable next-step recommendations based on results.
+        
+        Args:
+            candidates: Ranked prediction candidates
+            uncertainty_metrics: Uncertainty quantification results
+            task_type: Type of task (spec2struct, structure2spec, etc.)
+            
+        Returns:
+            List of actionable recommendations with priorities
+        """
+        recommendations = []
+        
+        if not candidates:
+            recommendations.append({
+                "action": "data_collection",
+                "description": "Collect additional experimental data for analysis",
+                "priority": "high",
+                "effort": "medium",
+                "expected_impact": "high"
+            })
+            return recommendations
+        
+        # Get top candidate and confidence
+        top_candidate = candidates[0]
+        top_confidence = top_candidate.get('confidence', 0.0)
+        
+        # Confidence-based recommendations
+        if top_confidence < 0.5:
+            recommendations.extend(self._generate_low_confidence_recommendations(task_type))
+        elif top_confidence < 0.8:
+            recommendations.extend(self._generate_medium_confidence_recommendations(task_type))
+        else:
+            recommendations.extend(self._generate_high_confidence_recommendations(task_type))
+        
+        # Uncertainty-based recommendations
+        uncertainty = uncertainty_metrics.get('epistemic_uncertainty', 0.0)
+        if uncertainty > 0.3:
+            recommendations.extend(self._generate_high_uncertainty_recommendations())
+        
+        # Task-specific recommendations
+        if task_type == "spec2struct":
+            recommendations.extend(self._generate_spec2struct_recommendations(candidates))
+        elif task_type == "structure2spec":
+            recommendations.extend(self._generate_structure2spec_recommendations(candidates))
+        elif task_type == "explain":
+            recommendations.extend(self._generate_explanation_recommendations(candidates))
+        elif task_type == "retrieval":
+            recommendations.extend(self._generate_retrieval_recommendations(candidates))
+        
+        # Remove duplicates and rank by priority
+        unique_recommendations = self._deduplicate_recommendations(recommendations)
+        return self._prioritize_recommendations(unique_recommendations)
+    
+    def _generate_low_confidence_recommendations(self, task_type: str) -> List[Dict[str, Any]]:
+        """Generate recommendations for low confidence results."""
+        return [
+            {
+                "action": "additional_data_acquisition",
+                "description": "Acquire higher quality or complementary experimental data",
+                "priority": "high",
+                "effort": "high", 
+                "expected_impact": "high",
+                "timeframe": "short_term"
+            },
+            {
+                "action": "method_validation",
+                "description": "Validate analysis method with known standards",
+                "priority": "high",
+                "effort": "medium",
+                "expected_impact": "medium",
+                "timeframe": "short_term"
+            },
+            {
+                "action": "expert_consultation",
+                "description": "Consult domain experts for interpretation guidance",
+                "priority": "medium",
+                "effort": "low",
+                "expected_impact": "medium",
+                "timeframe": "immediate"
+            }
+        ]
+    
+    def _generate_medium_confidence_recommendations(self, task_type: str) -> List[Dict[str, Any]]:
+        """Generate recommendations for medium confidence results."""
+        return [
+            {
+                "action": "orthogonal_validation",
+                "description": "Use complementary analytical methods for validation",
+                "priority": "medium",
+                "effort": "medium",
+                "expected_impact": "high",
+                "timeframe": "short_term"
+            },
+            {
+                "action": "literature_validation",
+                "description": "Cross-reference results with published literature",
+                "priority": "medium",
+                "effort": "low",
+                "expected_impact": "medium",
+                "timeframe": "immediate"
+            },
+            {
+                "action": "replicate_analysis", 
+                "description": "Repeat analysis with independent samples",
+                "priority": "low",
+                "effort": "medium",
+                "expected_impact": "medium",
+                "timeframe": "medium_term"
+            }
+        ]
+    
+    def _generate_high_confidence_recommendations(self, task_type: str) -> List[Dict[str, Any]]:
+        """Generate recommendations for high confidence results."""
+        return [
+            {
+                "action": "publish_results",
+                "description": "Consider publishing findings in appropriate journal",
+                "priority": "medium",
+                "effort": "high",
+                "expected_impact": "high", 
+                "timeframe": "long_term"
+            },
+            {
+                "action": "functional_validation",
+                "description": "Conduct functional studies to validate biological relevance",
+                "priority": "high",
+                "effort": "high",
+                "expected_impact": "high",
+                "timeframe": "medium_term"
+            },
+            {
+                "action": "expand_study",
+                "description": "Extend analysis to related structures or conditions",
+                "priority": "low",
+                "effort": "high",
+                "expected_impact": "medium",
+                "timeframe": "long_term"
+            }
+        ]
+    
+    def _generate_high_uncertainty_recommendations(self) -> List[Dict[str, Any]]:
+        """Generate recommendations for high uncertainty results."""
+        return [
+            {
+                "action": "model_improvement",
+                "description": "Improve model training with additional data",
+                "priority": "high",
+                "effort": "high",
+                "expected_impact": "high",
+                "timeframe": "long_term"
+            },
+            {
+                "action": "ensemble_analysis",
+                "description": "Use ensemble of multiple prediction methods",
+                "priority": "medium",
+                "effort": "medium",
+                "expected_impact": "medium",
+                "timeframe": "short_term"
+            }
+        ]
+    
+    def _generate_spec2struct_recommendations(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate spec2struct-specific recommendations."""
+        return [
+            {
+                "action": "synthetic_validation",
+                "description": "Synthesize top candidate structures for MS comparison",
+                "priority": "high",
+                "effort": "high",
+                "expected_impact": "very_high",
+                "timeframe": "medium_term"
+            },
+            {
+                "action": "fragmentation_analysis",
+                "description": "Perform detailed fragmentation pathway analysis",
+                "priority": "medium",
+                "effort": "medium", 
+                "expected_impact": "medium",
+                "timeframe": "short_term"
+            }
+        ]
+    
+    def _generate_structure2spec_recommendations(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate structure2spec-specific recommendations."""
+        return [
+            {
+                "action": "experimental_validation",
+                "description": "Acquire experimental spectra for predicted structures",
+                "priority": "high",
+                "effort": "medium",
+                "expected_impact": "high",
+                "timeframe": "short_term"
+            },
+            {
+                "action": "instrument_optimization",
+                "description": "Optimize MS parameters for better fragmentation",
+                "priority": "medium",
+                "effort": "low",
+                "expected_impact": "medium",
+                "timeframe": "immediate"
+            }
+        ]
+    
+    def _generate_explanation_recommendations(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate explanation-specific recommendations."""
+        return [
+            {
+                "action": "literature_expansion",
+                "description": "Conduct comprehensive literature review",
+                "priority": "medium",
+                "effort": "medium",
+                "expected_impact": "medium",
+                "timeframe": "short_term"
+            },
+            {
+                "action": "mechanism_studies",
+                "description": "Design experiments to test proposed mechanisms",
+                "priority": "high",
+                "effort": "high", 
+                "expected_impact": "high",
+                "timeframe": "long_term"
+            }
+        ]
+    
+    def _generate_retrieval_recommendations(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate retrieval-specific recommendations."""
+        return [
+            {
+                "action": "database_expansion",
+                "description": "Search additional glycan databases",
+                "priority": "medium",
+                "effort": "low",
+                "expected_impact": "medium",
+                "timeframe": "immediate"
+            },
+            {
+                "action": "similarity_analysis",
+                "description": "Perform detailed similarity analysis of top hits",
+                "priority": "medium",
+                "effort": "medium",
+                "expected_impact": "medium",
+                "timeframe": "short_term"
+            }
+        ]
+    
+    def _deduplicate_recommendations(self, recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate recommendations."""
+        seen_actions = set()
+        unique_recommendations = []
+        
+        for rec in recommendations:
+            action = rec.get('action', '')
+            if action not in seen_actions:
+                seen_actions.add(action)
+                unique_recommendations.append(rec)
+        
+        return unique_recommendations
+    
+    def _prioritize_recommendations(self, recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Prioritize recommendations by impact and effort."""
+        priority_scores = {
+            "high": 3,
+            "medium": 2, 
+            "low": 1
+        }
+        
+        effort_scores = {
+            "low": 3,
+            "medium": 2,
+            "high": 1
+        }
+        
+        impact_scores = {
+            "very_high": 4,
+            "high": 3,
+            "medium": 2,
+            "low": 1
+        }
+        
+        for rec in recommendations:
+            priority_score = priority_scores.get(rec.get('priority', 'medium'), 2)
+            effort_score = effort_scores.get(rec.get('effort', 'medium'), 2)  
+            impact_score = impact_scores.get(rec.get('expected_impact', 'medium'), 2)
+            
+            # Combined score favors high impact, high priority, low effort
+            combined_score = (0.4 * impact_score + 0.4 * priority_score + 0.2 * effort_score)
+            rec['combined_score'] = combined_score
+        
+        return sorted(recommendations, key=lambda r: r['combined_score'], reverse=True)
         
     def save_reasoning_session(self, filepath: str):
         """Save reasoning history to file"""
