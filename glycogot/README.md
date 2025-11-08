@@ -298,7 +298,7 @@ This implementation is based on established Graph of Thoughts research paradigms
 - Glycan-specific analogical reasoning patterns
 - Integration with specialized glycoinformatics tools
 
-## 🔮 Future Enhancements
+## 🔮 Future Enhancements dff
 
 Planned improvements include:
 
