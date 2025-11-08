@@ -16,8 +16,8 @@ from pathlib import Path
 # Platform imports
 try:
     from glycokg.integration.coordinator import DataCoordinator
-    from glycogot.integration import ReasoningOrchestrator, ReasoningRequest
-    from glycogot.reasoning import ReasoningType
+    from glycoreasoner.integration import ReasoningOrchestrator, ReasoningRequest
+    from glycoreasoner.reasoning import ReasoningType
     from glycollm.models.glycollm import GlycoLLM
     HAS_PLATFORM_COMPONENTS = True
 except ImportError:

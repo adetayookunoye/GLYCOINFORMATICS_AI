@@ -1,4 +1,19 @@
 #!/bin/bash
+#SBATCH --job-name=foundation_setup
+#SBATCH --partition=batch
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=1gb
+#SBATCH --time=00:10:00
+#SBATCH --output=foundation_setup_%j.log
+
+# ==============================================================================
+# WARNING: This script is designed for a local machine with Docker installed.
+# It is NOT intended to be run on an HPC cluster like Sapelo2.
+# Commands like 'docker' and 'docker-compose' will likely fail.
+# The correct procedure for the cluster is to use the 'sub.sh' script
+# to run your containerized training job.
+# ==============================================================================
 
 # Glycoinformatics AI Platform - Foundation Startup Script
 # This script helps you get started with the core platform files

@@ -68,14 +68,13 @@ Documentation = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI/tree/main
 Repository = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI"
 Issues = "https://github.com/adetayookunoye/GLYCOINFORMATICS_AI/issues"
 
-[tool.setuptools]
-packages = ["glycokg", "glycollm", "glycogot", "glyco_platform"]
+packages = ["glycokg", "glycollm", "glycoreasoner", "glycogot", "glyco_platform"]
 
-[tool.setuptools.package-dir]
+[project.scripts]
 glycokg = "glycokg"
 glycollm = "glycollm"
+glycoreasoner = "glycoreasoner"
 glycogot = "glycogot"
-glyco_platform = "glyco_platform"
 
 [tool.black]
 line-length = 100

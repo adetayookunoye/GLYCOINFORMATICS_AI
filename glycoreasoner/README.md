@@ -1,0 +1,1 @@
+# GlycoGoT module (stubs for MVP)
