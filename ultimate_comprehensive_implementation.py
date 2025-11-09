@@ -20,6 +20,9 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
 import os
+import concurrent.futures
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -49,10 +52,20 @@ class UltimateComprehensiveGlycoSystem:
     2. Apply all enhancements to existing datasets (new functionality)
     """
     
-    def __init__(self, target_samples: int = 25000):
+    def __init__(self, target_samples: int = 25000, max_workers: int = 100, batch_size: int = 50):
         self.target_samples = target_samples
         self.collected_data = []
         self.session = None
+        
+        # Parallel processing configuration
+        self.max_workers = max_workers  # Maximum parallel threads
+        self.batch_size = batch_size    # Size of each processing batch
+        self.processing_stats = {
+            'processed': 0,
+            'successful': 0,
+            'failed': 0,
+            'start_time': None
+        }
         
         # Output directory
         self.output_dir = Path("data/processed/ultimate_real_training")
@@ -158,14 +171,15 @@ class UltimateComprehensiveGlycoSystem:
         except Exception as e:
             logger.error(f"Failed to initialize original clients: {e}")
 
-    async def collect_real_structures(self, limit: int = None) -> List[GlycanStructure]:
-        """Original structure collection from GlyTouCan"""
+    async def collect_real_structures(self, limit: int = None) -> List:
+        """Parallel structure collection from GlyTouCan with multi-threading"""
         if not ORIGINAL_CLIENTS_AVAILABLE or not self.glytoucan_client:
             logger.warning("Original data collection not available")
             return []
             
         try:
-            logger.info(f"🔍 Collecting {limit or self.target_samples} real glycan structures from GlyTouCan...")
+            target = limit or self.target_samples
+            logger.info(f"� Collecting {target} real glycan structures from GlyTouCan with {self.max_workers} parallel workers...")
             
             # Get real structure IDs from GlyTouCan
             structure_ids = self.glytoucan_client.get_all_structure_ids()
@@ -176,36 +190,95 @@ class UltimateComprehensiveGlycoSystem:
                 structure_ids = structure_ids[:limit]
                 logger.info(f"🎯 Limited to {len(structure_ids)} structure IDs")
             
+            # Initialize processing stats
+            self.processing_stats['start_time'] = time.time()
+            self.processing_stats['processed'] = 0
+            self.processing_stats['successful'] = 0
+            self.processing_stats['failed'] = 0
+            
+            # Split into batches for parallel processing
+            batches = [structure_ids[i:i + self.batch_size] for i in range(0, len(structure_ids), self.batch_size)]
+            logger.info(f"� Created {len(batches)} batches of {self.batch_size} structures each")
+            
             structures = []
-            batch_size = 50
             
-            for i in range(0, len(structure_ids), batch_size):
-                batch_ids = structure_ids[i:i + batch_size]
-                logger.info(f"🔄 Processing batch {i//batch_size + 1}: {len(batch_ids)} structures")
+            # Process batches in parallel using ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                # Submit all batch processing tasks
+                future_to_batch = {
+                    executor.submit(self._process_structure_batch_sync, i, batch): (i, batch) 
+                    for i, batch in enumerate(batches)
+                }
                 
-                try:
-                    # Get real structure details
-                    batch_structures = await self.glytoucan_client.get_structures_batch(batch_ids)
-                    structures.extend(batch_structures)
-                    self.stats['structures_fetched'] += len(batch_structures)
-                    self.stats['api_calls'] += 1
-                    
-                    # Small delay to be respectful to API
-                    await asyncio.sleep(1)
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ Error processing batch {i//batch_size + 1}: {e}")
-                    self.stats['errors'] += 1
-                    continue
+                # Collect results as they complete
+                for future in as_completed(future_to_batch):
+                    batch_index, batch_ids = future_to_batch[future]
+                    try:
+                        batch_structures = future.result()
+                        structures.extend(batch_structures)
+                        self.processing_stats['successful'] += len(batch_structures)
+                        
+                        # Progress reporting
+                        self.processing_stats['processed'] += len(batch_ids)
+                        progress = (self.processing_stats['processed'] / len(structure_ids)) * 100
+                        elapsed = time.time() - self.processing_stats['start_time']
+                        rate = self.processing_stats['processed'] / elapsed if elapsed > 0 else 0
+                        
+                        logger.info(f"✅ Batch {batch_index + 1}/{len(batches)} complete: "
+                                  f"{len(batch_structures)} structures | "
+                                  f"Progress: {progress:.1f}% | "
+                                  f"Rate: {rate:.1f} structures/sec")
+                        
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error processing batch {batch_index + 1}: {e}")
+                        self.processing_stats['failed'] += len(batch_ids)
             
-            logger.info(f"✅ Collected {len(structures)} real structures from GlyTouCan")
+            total_time = time.time() - self.processing_stats['start_time']
+            final_rate = len(structures) / total_time if total_time > 0 else 0
+            
+            logger.info(f"🎉 Parallel collection complete!")
+            logger.info(f"✅ Collected {len(structures)} structures in {total_time:.2f}s ({final_rate:.1f} structures/sec)")
+            logger.info(f"📊 Success: {self.processing_stats['successful']}, Failed: {self.processing_stats['failed']}")
+            
             return structures
             
         except Exception as e:
-            logger.error(f"Error collecting structures: {e}")
+            logger.error(f"Error in parallel structure collection: {e}")
+            return []
+    
+    def _process_structure_batch_sync(self, batch_index: int, batch_ids: List[str]) -> List:
+        """Synchronous wrapper for batch processing (for ThreadPoolExecutor)"""
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Run the async batch processing
+            return loop.run_until_complete(self._process_structure_batch_async(batch_index, batch_ids))
+            
+        except Exception as e:
+            logger.warning(f"Error in sync wrapper for batch {batch_index + 1}: {e}")
+            return []
+        finally:
+            loop.close()
+    
+    async def _process_structure_batch_async(self, batch_index: int, batch_ids: List[str]) -> List:
+        """Async batch processing for structures"""
+        try:
+            # Create a new GlyTouCan client for this thread to avoid conflicts
+            async with GlyTouCanClient() as client:
+                batch_structures = await client.get_structures_batch(batch_ids)
+                
+                # Small delay to be respectful to API
+                await asyncio.sleep(0.5)
+                
+                return batch_structures
+                
+        except Exception as e:
+            logger.debug(f"Error processing batch {batch_index + 1}: {e}")
             return []
 
-    async def get_real_literature(self, glytoucan_id: str, structure: GlycanStructure) -> List:
+    async def get_real_literature(self, glytoucan_id: str, structure) -> List:
         """Fetch REAL literature from PubMed"""
         try:
             # Search PubMed for literature related to this specific glycan
@@ -246,7 +319,7 @@ class UltimateComprehensiveGlycoSystem:
             logger.debug(f"No literature found for {glytoucan_id}: {e}")
             return []
 
-    async def get_real_spectrum(self, glytoucan_id: str) -> Optional[MSSpectrum]:
+    async def get_real_spectrum(self, glytoucan_id: str):
         """Fetch REAL spectrum from GlycoPOST (using the working method with proper async context)"""
         try:
             # Get GlycoPOST credentials from environment or use defaults
@@ -284,7 +357,7 @@ class UltimateComprehensiveGlycoSystem:
             logger.debug(f"No real spectrum found for {glytoucan_id}: {e}")
             return None
 
-    async def convert_to_ultimate_format(self, structure: GlycanStructure, sample_idx: int) -> Dict:
+    async def convert_to_ultimate_format(self, structure, sample_idx: int) -> Dict:
         """Convert structure to ultimate training format with all real data"""
         
         try:
@@ -416,7 +489,7 @@ class UltimateComprehensiveGlycoSystem:
             logger.warning(f"Error converting structure {structure.glytoucan_id}: {e}")
             return None
 
-    def _generate_literature_enhanced_text(self, structure: GlycanStructure, literature: List[PubMedArticle] = None) -> str:
+    def _generate_literature_enhanced_text(self, structure, literature = None) -> str:
         """Generate enhanced descriptive text from structure and literature"""
         
         base_text = f"Glycan structure {structure.glytoucan_id}"
@@ -442,7 +515,7 @@ class UltimateComprehensiveGlycoSystem:
         
         return base_text
 
-    def _generate_real_structure_graph(self, structure: GlycanStructure) -> Dict:
+    def _generate_real_structure_graph(self, structure) -> Dict:
         """Generate real structure graph from WURCS/GlycoCT"""
         
         if not structure.wurcs_sequence and not structure.glycoct:
@@ -1137,35 +1210,49 @@ class UltimateComprehensiveGlycoSystem:
                 logger.error("❌ No structures collected, stopping")
                 return
             
-            # Convert to training format with ALL enhancements
-            logger.info("🔄 Converting to training format with COMPLETE enhancements...")
+            # Convert to training format with ALL enhancements in parallel
+            logger.info(f"🔄 Converting to training format with PARALLEL processing ({self.max_workers} workers)...")
             training_samples = []
             
-            for idx, structure in enumerate(structures):
-                if len(training_samples) >= self.target_samples:
-                    break
-                    
-                try:
-                    # Convert to original format first
-                    sample = await self.convert_to_ultimate_format(structure, idx)
-                    
-                    if sample:  # Only proceed if sample was successfully created
-                        # Then apply all enhancements
-                        enhanced_sample = await self.process_comprehensive_enhancement(sample)
-                        training_samples.append(enhanced_sample)
+            # Split structures into batches for parallel processing
+            batches = [structures[i:i + self.batch_size] for i in range(0, len(structures), self.batch_size)]
+            logger.info(f"📦 Created {len(batches)} batches of {self.batch_size} structures each for parallel processing")
+            
+            # Process batches in parallel
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                future_to_batch = {
+                    executor.submit(self._process_training_batch_sync, i, batch): (i, batch) 
+                    for i, batch in enumerate(batches)
+                }
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_batch):
+                    batch_index, batch_structures = future_to_batch[future]
+                    try:
+                        batch_samples = future.result()
+                        training_samples.extend(batch_samples)
                         
-                        self.stats['complete_integrations'] += 1
-                    
-                    if (idx + 1) % 10 == 0:
-                        logger.info(f"🔄 Processed {idx + 1}/{len(structures)} samples. "
-                                  f"Success: {len(training_samples)}, "
-                                  f"SPARQL: {self.stats['sparql_successes']}, "
-                                  f"Errors: {self.stats['errors']}")
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ Error processing structure {structure.glytoucan_id}: {e}")
-                    self.stats['errors'] += 1
-                    continue
+                        self.stats['complete_integrations'] += len(batch_samples)
+                        
+                        # Progress reporting
+                        progress = (len(training_samples) / min(len(structures), self.target_samples)) * 100
+                        
+                        logger.info(f"✅ Training batch {batch_index + 1}/{len(batches)} complete: "
+                                  f"{len(batch_samples)} samples | "
+                                  f"Progress: {progress:.1f}% | "
+                                  f"Total: {len(training_samples)}/{self.target_samples}")
+                        
+                        # Stop if we have enough samples
+                        if len(training_samples) >= self.target_samples:
+                            logger.info(f"🎯 Target of {self.target_samples} samples reached!")
+                            break
+                        
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error processing training batch {batch_index + 1}: {e}")
+                        self.stats['errors'] += len(batch_structures)
+            
+            # Limit to target samples
+            training_samples = training_samples[:self.target_samples]
             
             # Save dataset with comprehensive enhancements
             await self._save_enhanced_dataset(training_samples, start_time)
@@ -1323,6 +1410,49 @@ class UltimateComprehensiveGlycoSystem:
             logger.warning("⚠️ Processing completed with errors - check logs")
         logger.info("="*80)
 
+    def _process_training_batch_sync(self, batch_index: int, structures: List) -> List[Dict]:
+        """Synchronous wrapper for training batch processing"""
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            # Run the async training batch processing
+            return loop.run_until_complete(self._process_training_batch_async(batch_index, structures))
+            
+        except Exception as e:
+            logger.warning(f"Error in training sync wrapper for batch {batch_index + 1}: {e}")
+            return []
+        finally:
+            loop.close()
+    
+    async def _process_training_batch_async(self, batch_index: int, structures: List) -> List[Dict]:
+        """Async training batch processing"""
+        training_samples = []
+        
+        try:
+            for idx, structure in enumerate(structures):
+                try:
+                    # Convert to original format first
+                    sample = await self.convert_to_ultimate_format(structure, idx)
+                    
+                    if sample:  # Only proceed if sample was successfully created
+                        # Then apply all enhancements
+                        enhanced_sample = await self.process_comprehensive_enhancement(sample)
+                        training_samples.append(enhanced_sample)
+                    
+                except Exception as e:
+                    logger.debug(f"Error processing structure {structure.glytoucan_id} in training batch {batch_index + 1}: {e}")
+                    continue
+            
+            # Small delay to be respectful to APIs
+            await asyncio.sleep(0.5)
+            
+        except Exception as e:
+            logger.debug(f"Error in training batch {batch_index + 1} processing: {e}")
+        
+        return training_samples
+
 
 async def main():
     """Main entry point for ultimate comprehensive system"""
@@ -1331,7 +1461,9 @@ async def main():
     parser = argparse.ArgumentParser(description="Ultimate comprehensive glycoinformatics system")
     parser.add_argument("--mode", choices=['collect', 'enhance'], default='enhance', 
                        help="Mode: 'collect' new data or 'enhance' existing dataset")
-    parser.add_argument("--target", type=int, default=25000, help="Target number of samples (collect mode)")
+    parser.add_argument("--target", type=int, default=100, help="Target number of samples (collect mode)")
+    parser.add_argument("--workers", type=int, default=100, help="Number of parallel workers")
+    parser.add_argument("--batch-size", type=int, default=50, help="Batch size for parallel processing")
     parser.add_argument("--dataset", type=str, help="Path to existing dataset (enhance mode)")
     parser.add_argument("--max-samples", type=int, help="Max samples to process (enhance mode)")
     parser.add_argument("--quick", action="store_true", help="Quick test with 10 samples")
@@ -1345,7 +1477,12 @@ async def main():
         target = args.target
         max_samples = args.max_samples
     
-    system = UltimateComprehensiveGlycoSystem(target_samples=target)
+    # Create system with parallel processing configuration  
+    system = UltimateComprehensiveGlycoSystem(
+        target_samples=target,
+        max_workers=getattr(args, 'workers', 100),
+        batch_size=getattr(args, 'batch_size', 50)
+    )
     
     if args.mode == 'collect':
         logger.info("🚀 COLLECTION MODE: Building new dataset with all enhancements")

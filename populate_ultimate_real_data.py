@@ -564,22 +564,22 @@ class UltimateRealDataCollector:
             logger.info("="*80)
             logger.info("🎉 ULTIMATE REAL DATA + LITERATURE COLLECTION COMPLETE!")
             logger.info("="*80)
-            logger.info(f"📊 Total samples collected: {total_samples}")
-            logger.info(f"🧬 All structures: 100% real from GlyTouCan")
-            logger.info(f"📈 Real mass spectra: {self.stats['real_spectra_found']} ({self.stats['real_spectra_found']/total_samples*100:.1f}%)")
-            logger.info(f"🔗 Real protein associations: {self.stats['real_proteins_found']} structures have proteins")
-            logger.info(f"📚 Real literature integration: {self.stats['real_literature_found']} structures have literature")  # 🔥 NEW
-            logger.info(f"📝 Literature-enhanced text: 100% generated from real data + papers")
-            logger.info(f"🎯 Real structure graphs: 100% parsed from real WURCS/GlycoCT")
-            logger.info(f"🚂 Train samples: {len(train_data)}")
-            logger.info(f"🧪 Test samples: {len(test_data)}")
-            logger.info(f"✅ Validation samples: {len(validation_data)}")
-            logger.info(f"⏱️ Execution time: {elapsed:.2f} seconds")
-            logger.info(f"📡 Total API calls: {self.stats['api_calls']}")
+            logger.info(f"Total samples collected: {total_samples}")
+            logger.info(f"All structures: 100% real from GlyTouCan")
+            logger.info(f"Real mass spectra: {self.stats['real_spectra_found']} ({self.stats['real_spectra_found']/total_samples*100:.1f}%)")
+            logger.info(f"Real protein associations: {self.stats['real_proteins_found']} structures have proteins")
+            logger.info(f"Real literature integration: {self.stats['real_literature_found']} structures have literature")  # 🔥 NEW
+            logger.info(f"Literature-enhanced text: 100% generated from real data + papers")
+            logger.info(f"Real structure graphs: 100% parsed from real WURCS/GlycoCT")
+            logger.info(f"Train samples: {len(train_data)}")
+            logger.info(f"Test samples: {len(test_data)}")
+            logger.info(f"Validation samples: {len(validation_data)}")
+            logger.info(f"⏱Execution time: {elapsed:.2f} seconds")
+            logger.info(f"Total API calls: {self.stats['api_calls']}")
             logger.info("="*80)
             
         except Exception as e:
-            logger.error(f"❌ Collection failed: {e}")
+            logger.error(f"ollection failed: {e}")
             raise
 
 
